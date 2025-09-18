@@ -1,41 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Form, Badge, Modal } from 'react-bootstrap';
 import { FaCalendarAlt, FaFilter, FaPlusCircle } from 'react-icons/fa';
-
-const sampleEvents = [
-  {
-    id: 1,
-    title: "Math Workshop",
-    date: "2025-09-20",
-    time: "10:00 AM - 12:00 PM",
-    description: "Interactive math problem-solving session.",
-    location: "Room 101",
-    type: "Workshop",
-  },
-  {
-    id: 2,
-    title: "Science Quiz",
-    date: "2025-09-23",
-    time: "2:00 PM - 3:30 PM",
-    description: "Participate in the monthly science quiz competition.",
-    location: "Auditorium",
-    type: "Competition",
-  },
-  {
-    id: 3,
-    title: "Parent-Teacher Meeting",
-    date: "2025-09-25",
-    time: "4:00 PM - 5:00 PM",
-    description: "Discuss progress with your teachers.",
-    location: "Conference Hall",
-    type: "Meeting",
-  },
-];
+import { supabase } from '../../lib/supabaseClient'; // Adjust path as needed
 
 export default function StudentEvents() {
-  const [events, setEvents] = useState(sampleEvents);
+  const [events, setEvents] = useState([]);
   const [filter, setFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
 
@@ -48,6 +19,24 @@ export default function StudentEvents() {
     type: ''
   });
 
+  // Fetch events from Supabase
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    const { data, error } = await supabase
+      .from('student_events')
+      .select('*')
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching events:', error);
+    } else {
+      setEvents(data);
+    }
+  };
+
   const eventTypes = [...new Set(events.map(e => e.type))];
 
   const filteredEvents = filter === "All" ? events : events.filter(event => event.type === filter);
@@ -57,15 +46,24 @@ export default function StudentEvents() {
     setNewEvent(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddEvent = (e) => {
+  const handleAddEvent = async (e) => {
     e.preventDefault();
     if (!newEvent.title || !newEvent.date || !newEvent.type) {
       alert("Please fill at least title, date, and type");
       return;
     }
-    setEvents(prev => [...prev, { ...newEvent, id: prev.length + 1 }]);
-    setNewEvent({ title: '', date: '', time: '', description: '', location: '', type: '' });
-    setShowModal(false);
+
+    const { error } = await supabase
+      .from('student_events')
+      .insert([newEvent]);
+
+    if (error) {
+      alert('Failed to add event: ' + error.message);
+    } else {
+      setShowModal(false);
+      setNewEvent({ title: '', date: '', time: '', description: '', location: '', type: '' });
+      fetchEvents();
+    }
   };
 
   return (

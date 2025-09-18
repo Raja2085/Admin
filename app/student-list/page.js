@@ -31,10 +31,20 @@ export default function StudentList() {
   const [addFormData, setAddFormData] = useState({ ...initialIndividual });
   const [searchTerm, setSearchTerm] = useState('');
   const [classTypeFilter, setClassTypeFilter] = useState('');
-
-  // **Add edit states**
   const [editingStudentId, setEditingStudentId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
+
+  // Input style to fix table row height
+  const editInputStyle = {
+    height: '32px',
+    padding: '0 6px',
+    fontSize: '0.85rem',
+    border: '1px solid #ced4da',
+    borderRadius: '4px',
+    boxSizing: 'border-box',
+    verticalAlign: 'middle',
+    width: '100%',
+  };
 
   useEffect(() => {
     fetchStudents();
@@ -157,13 +167,7 @@ export default function StudentList() {
     }
   }
 
-  // **Edit related functions**
-
-  function startEdit(student) {
-    setEditingStudentId(student.id);
-    setEditFormData(student);
-  }
-
+  // Edit functions
   function cancelEdit() {
     setEditingStudentId(null);
     setEditFormData({});
@@ -242,7 +246,12 @@ export default function StudentList() {
               <Col md={12}>
                 <Form.Group className="mb-2">
                   <Form.Label>Class Type</Form.Label>
-                  <Form.Select name="class_type" value={addFormData.class_type || ''} onChange={handleAddInputChange} required>
+                  <Form.Select
+                    name="class_type"
+                    value={addFormData.class_type || ''}
+                    onChange={handleAddInputChange}
+                    required
+                  >
                     <option value="">Select</option>
                     <option value="Individual">Individual</option>
                     <option value="Group">Group</option>
@@ -250,6 +259,7 @@ export default function StudentList() {
                 </Form.Group>
               </Col>
             </Row>
+
             {addFormData.class_type === 'Group' && (
               <>
                 <Row>
@@ -284,30 +294,72 @@ export default function StudentList() {
                             />
                           </Col>
                           <Col md={2}>
-                            <Form.Control placeholder="Reg No (auto)" name="reg_no" value={member.reg_no || generateRegNo()} disabled />
+                            <Form.Control
+                              placeholder="Reg No (auto)"
+                              name="reg_no"
+                              value={member.reg_no || generateRegNo()}
+                              disabled
+                            />
                           </Col>
                           <Col md={2}>
-                            <Form.Control type="date" name="dob" value={member.dob} onChange={(e) => handleMemberChange(idx, e)} />
+                            <Form.Control
+                              type="date"
+                              name="dob"
+                              value={member.dob}
+                              onChange={(e) => handleMemberChange(idx, e)}
+                            />
                           </Col>
                           <Col md={2}>
-                            <Form.Control type="email" placeholder="Email" name="email" value={member.email} onChange={(e) => handleMemberChange(idx, e)} />
+                            <Form.Control
+                              type="email"
+                              placeholder="Email"
+                              name="email"
+                              value={member.email}
+                              onChange={(e) => handleMemberChange(idx, e)}
+                            />
                           </Col>
                           <Col md={2}>
-                            <Form.Control type="text" placeholder="Phone" name="phone" value={member.phone} onChange={(e) => handleMemberChange(idx, e)} />
+                            <Form.Control
+                              type="tel"
+                              placeholder="Phone"
+                              name="phone"
+                              value={member.phone}
+                              maxLength={10}
+                              onInput={(e) => {
+                                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                              }}
+                              onChange={(e) => handleMemberChange(idx, e)}
+                            />
                           </Col>
                           <Col md={1}>
-                            <Form.Control type="text" placeholder="Place" name="place" value={member.place} onChange={(e) => handleMemberChange(idx, e)} />
+                            <Form.Control
+                              type="text"
+                              placeholder="Place"
+                              name="place"
+                              value={member.place}
+                              onChange={(e) => handleMemberChange(idx, e)}
+                            />
                           </Col>
                           <Col md={1} className="d-flex align-items-center">
                             {addFormData.members.length > 1 && (
-                              <Button variant="danger" onClick={() => handleRemoveMember(idx)} size="sm" className="ms-1">
+                              <Button
+                                variant="danger"
+                                onClick={() => handleRemoveMember(idx)}
+                                size="sm"
+                                className="ms-1"
+                              >
                                 Remove
                               </Button>
                             )}
                           </Col>
                         </Row>
                       ))}
-                      <Button variant="primary" size="sm" className="me-2 mt-2" onClick={handleAddMember}>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="me-2 mt-2"
+                        onClick={handleAddMember}
+                      >
                         Add Member
                       </Button>
                     </div>
@@ -315,46 +367,82 @@ export default function StudentList() {
                 </Row>
               </>
             )}
+
             {addFormData.class_type === 'Individual' && (
               <Row>
                 <Col md={4}>
                   <Form.Group className="mb-2">
                     <Form.Label>Name</Form.Label>
-                    <Form.Control name="name" value={addFormData.name} onChange={handleAddInputChange} required />
+                    <Form.Control
+                      name="name"
+                      value={addFormData.name}
+                      onChange={handleAddInputChange}
+                      required
+                    />
                   </Form.Group>
                 </Col>
                 <Col md={4}>
                   <Form.Group className="mb-2">
                     <Form.Label>Reg No</Form.Label>
-                    <Form.Control name="reg_no" value={addFormData.reg_no || generateRegNo()} onChange={handleAddInputChange} required />
+                    <Form.Control
+                      name="reg_no"
+                      value={addFormData.reg_no || generateRegNo()}
+                      onChange={handleAddInputChange}
+                      required
+                    />
                   </Form.Group>
                 </Col>
                 <Col md={4}>
                   <Form.Group className="mb-2">
                     <Form.Label>DOB</Form.Label>
-                    <Form.Control type="date" name="dob" value={addFormData.dob} onChange={handleAddInputChange} />
+                    <Form.Control
+                      type="date"
+                      name="dob"
+                      value={addFormData.dob}
+                      onChange={handleAddInputChange}
+                    />
                   </Form.Group>
                 </Col>
                 <Col md={4}>
                   <Form.Group className="mb-2">
                     <Form.Label>Email</Form.Label>
-                    <Form.Control type="email" name="email" value={addFormData.email} onChange={handleAddInputChange} />
+                    <Form.Control
+                      type="email"
+                      name="email"
+                      value={addFormData.email}
+                      onChange={handleAddInputChange}
+                    />
                   </Form.Group>
                 </Col>
                 <Col md={4}>
                   <Form.Group className="mb-2">
                     <Form.Label>Phone</Form.Label>
-                    <Form.Control type="text" name="phone" value={addFormData.phone} onChange={handleAddInputChange} />
+                    <Form.Control
+                      type="tel"
+                      name="phone"
+                      value={addFormData.phone}
+                      maxLength={10}
+                      onInput={(e) => {
+                        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                      }}
+                      onChange={handleAddInputChange}
+                    />
                   </Form.Group>
                 </Col>
                 <Col md={4}>
                   <Form.Group className="mb-2">
                     <Form.Label>Place</Form.Label>
-                    <Form.Control type="text" name="place" value={addFormData.place} onChange={handleAddInputChange} />
+                    <Form.Control
+                      type="text"
+                      name="place"
+                      value={addFormData.place}
+                      onChange={handleAddInputChange}
+                    />
                   </Form.Group>
                 </Col>
               </Row>
             )}
+
             <div className="mt-4">
               <Button variant="success" type="submit" className="me-2">
                 Save
@@ -367,18 +455,28 @@ export default function StudentList() {
         </Card>
       )}
 
-      <Table bordered hover responsive>
+      <Table
+        bordered
+        hover
+        responsive
+        style={{
+          tableLayout: 'fixed',
+          wordBreak: 'break-word',
+          fontSize: '0.82rem', 
+          whiteSpace: 'nowrap',
+        }}
+      >
         <thead>
           <tr>
-            <th>Reg No</th>
-            <th>Name</th>
-            <th>DOB</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Place</th>
-            <th>Class Type</th>
-            <th>Group Name</th>
-            <th>Actions</th>
+            <th style={{ width: '99px' }}>Reg No</th>
+            <th style={{ width: '110px' }}>Name</th>
+            <th style={{ width: '110px' }}>DOB</th>
+            <th style={{ width: '180px' }}>Email</th>
+            <th style={{ width: '120px' }}>Phone</th>
+            <th style={{ width: '100px' }}>Place</th>
+            <th style={{ width: '100px' }}>Class Type</th>
+            <th style={{ width: '100px' }}>Group Name</th>
+            <th style={{ width: '130px' }}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -391,28 +489,201 @@ export default function StudentList() {
           )}
           {filteredStudents.map((student) => (
             <tr key={student.id}>
-              <td>{student.reg_no}</td>
-              <td>{student.name}</td>
-              <td>{student.dob}</td>
-              <td>{student.email}</td>
-              <td>{student.phone}</td>
-              <td>{student.place}</td>
-              <td>{student.class_type}</td>
-              <td>{student.group_name}</td>
-              <td>
-                <Button
-                  variant="warning"
-                  size="sm"
-                  className="me-1"
-                  onClick={() => {
-                    setEditingStudentId(student.id);
-                    setEditFormData(student);
-                  }}>
-                  Edit
-                </Button>
-                <Button variant="danger" size="sm" onClick={() => deleteStudent(student.id)}>
-                  Delete
-                </Button>
+              <td
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {student.reg_no}
+              </td>
+              <td
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {editingStudentId === student.id ? (
+                  <Form.Control
+                    style={editInputStyle}
+                    name="name"
+                    value={editFormData.name || ''}
+                    onChange={handleEditInputChange}
+                  />
+                ) : (
+                  student.name
+                )}
+              </td>
+              <td
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {editingStudentId === student.id ? (
+                  <Form.Control
+                    style={editInputStyle}
+                    type="date"
+                    name="dob"
+                    value={editFormData.dob || ''}
+                    onChange={handleEditInputChange}
+                  />
+                ) : (
+                  student.dob
+                )}
+              </td>
+              <td
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {editingStudentId === student.id ? (
+                  <Form.Control
+                    style={editInputStyle}
+                    type="email"
+                    name="email"
+                    value={editFormData.email || ''}
+                    onChange={handleEditInputChange}
+                  />
+                ) : (
+                  student.email
+                )}
+              </td>
+              <td
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {editingStudentId === student.id ? (
+                  <Form.Control
+                    style={editInputStyle}
+                    type="tel"
+                    name="phone"
+                    value={editFormData.phone || ''}
+                    maxLength={10}
+                    onInput={(e) => {
+                      e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                    }}
+                    onChange={handleEditInputChange}
+                  />
+                ) : (
+                  student.phone
+                )}
+              </td>
+              <td
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {editingStudentId === student.id ? (
+                  <Form.Control
+                    style={editInputStyle}
+                    type="text"
+                    name="place"
+                    value={editFormData.place || ''}
+                    onChange={handleEditInputChange}
+                  />
+                ) : (
+                  student.place
+                )}
+              </td>
+              <td
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {editingStudentId === student.id ? (
+                  <Form.Select
+                    style={editInputStyle}
+                    name="class_type"
+                    value={editFormData.class_type || ''}
+                    onChange={(e) => {
+                      handleEditInputChange(e);
+                      if (e.target.value === 'Individual') {
+                        setEditFormData((prev) => ({ ...prev, group_name: '' }));
+                      }
+                    }}
+                  >
+                    <option value="Individual">Individual</option>
+                    <option value="Group">Group</option>
+                  </Form.Select>
+                ) : (
+                  student.class_type
+                )}
+              </td>
+              <td
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {editingStudentId === student.id ? (
+                  editFormData.class_type === 'Group' ? (
+                    <Form.Control
+                      style={editInputStyle}
+                      name="group_name"
+                      value={editFormData.group_name || ''}
+                      onChange={handleEditInputChange}
+                      required
+                    />
+                  ) : (
+                    <Form.Control
+                      style={editInputStyle}
+                      name="group_name"
+                      value={editFormData.group_name || ''}
+                      disabled
+                      placeholder="N/A"
+                    />
+                  )
+                ) : (
+                  student.group_name
+                )}
+              </td>
+              <td
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {editingStudentId === student.id ? (
+                  <div style={{ display: 'flex', gap: '8px', flexDirection: 'row' }}>
+                    <Button variant="success" size="sm" onClick={saveEdit}>
+                      Save
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={cancelEdit}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: '8px', flexDirection: 'row' }}>
+                    <Button
+                      variant="warning"
+                      size="sm"
+                      onClick={() => {
+                        setEditingStudentId(student.id);
+                        setEditFormData(student);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => deleteStudent(student.id)}>
+                      Delete
+                    </Button>
+                  </div>
+                )}
               </td>
             </tr>
           ))}
