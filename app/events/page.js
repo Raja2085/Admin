@@ -9,6 +9,8 @@ export default function StudentEvents() {
   const [events, setEvents] = useState([]);
   const [filter, setFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   const [newEvent, setNewEvent] = useState({
     title: '',
@@ -38,7 +40,6 @@ export default function StudentEvents() {
   };
 
   const eventTypes = [...new Set(events.map(e => e.type))];
-
   const filteredEvents = filter === "All" ? events : events.filter(event => event.type === filter);
 
   const handleNewEventChange = (e) => {
@@ -62,6 +63,44 @@ export default function StudentEvents() {
     } else {
       setShowModal(false);
       setNewEvent({ title: '', date: '', time: '', description: '', location: '', type: '' });
+      fetchEvents();
+    }
+  };
+
+  // Edit event handlers
+  const handleEditClick = (event) => {
+    setSelectedEvent(event);
+    setShowEditModal(true);
+  };
+
+  const handleEditEventChange = (e) => {
+    const { name, value } = e.target;
+    setSelectedEvent(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleUpdateEvent = async (e) => {
+    e.preventDefault();
+    if (!selectedEvent.title || !selectedEvent.date || !selectedEvent.type) {
+      alert("Please fill at least title, date, and type");
+      return;
+    }
+    const { error } = await supabase
+      .from('student_events')
+      .update({
+        title: selectedEvent.title,
+        date: selectedEvent.date,
+        time: selectedEvent.time,
+        description: selectedEvent.description,
+        location: selectedEvent.location,
+        type: selectedEvent.type
+      })
+      .eq('id', selectedEvent.id);
+
+    if (error) {
+      alert('Failed to update event: ' + error.message);
+    } else {
+      setShowEditModal(false);
+      setSelectedEvent(null);
       fetchEvents();
     }
   };
@@ -115,7 +154,8 @@ export default function StudentEvents() {
                     <strong>Location:</strong> {event.location}
                   </Card.Text>
                 </Card.Body>
-                <Card.Footer className="d-flex justify-content-end">
+                <Card.Footer className="d-flex justify-content-end gap-2">
+                  <Button variant="outline-success" size="sm" onClick={() => handleEditClick(event)}>Edit</Button>
                   <Button variant="outline-primary" size="sm">Details</Button>
                 </Card.Footer>
               </Card>
@@ -123,6 +163,90 @@ export default function StudentEvents() {
           ))
         )}
       </Row>
+
+      {/* Modal for Editing Event */}
+      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Edit Event</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedEvent && (
+            <Form onSubmit={handleUpdateEvent}>
+              <Form.Group className="mb-3" controlId="editEventTitle">
+                <Form.Label>Title*</Form.Label>
+                <Form.Control
+                  name="title"
+                  type="text"
+                  placeholder="Enter event title"
+                  value={selectedEvent.title}
+                  onChange={handleEditEventChange}
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-3" controlId="editEventDate">
+                <Form.Label>Date*</Form.Label>
+                <Form.Control
+                  name="date"
+                  type="date"
+                  value={selectedEvent.date}
+                  onChange={handleEditEventChange}
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-3" controlId="editEventTime">
+                <Form.Label>Time</Form.Label>
+                <Form.Control
+                  name="time"
+                  type="text"
+                  placeholder="Enter event time (optional)"
+                  value={selectedEvent.time}
+                  onChange={handleEditEventChange}
+                />
+              </Form.Group>
+              <Form.Group className="mb-3" controlId="editEventLocation">
+                <Form.Label>Location</Form.Label>
+                <Form.Control
+                  name="location"
+                  type="text"
+                  placeholder="Enter location (optional)"
+                  value={selectedEvent.location}
+                  onChange={handleEditEventChange}
+                />
+              </Form.Group>
+              <Form.Group className="mb-3" controlId="editEventType">
+                <Form.Label>Type*</Form.Label>
+                <Form.Control
+                  name="type"
+                  as="select"
+                  value={selectedEvent.type}
+                  onChange={handleEditEventChange}
+                  required
+                >
+                  <option value="">Select event type</option>
+                  <option value="Workshop">Workshop</option>
+                  <option value="Competition">Competition</option>
+                  <option value="Meeting">Meeting</option>
+                  <option value="Other">Other</option>
+                </Form.Control>
+              </Form.Group>
+              <Form.Group className="mb-3" controlId="editEventDescription">
+                <Form.Label>Description</Form.Label>
+                <Form.Control
+                  name="description"
+                  as="textarea"
+                  rows={3}
+                  placeholder="Add event description (optional)"
+                  value={selectedEvent.description}
+                  onChange={handleEditEventChange}
+                />
+              </Form.Group>
+              <Button variant="primary" type="submit">
+                Update Event
+              </Button>
+            </Form>
+          )}
+        </Modal.Body>
+      </Modal>
 
       {/* Modal for Adding New Event */}
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
@@ -142,7 +266,6 @@ export default function StudentEvents() {
                 required
               />
             </Form.Group>
-
             <Form.Group className="mb-3" controlId="eventDate">
               <Form.Label>Date*</Form.Label>
               <Form.Control
@@ -153,7 +276,6 @@ export default function StudentEvents() {
                 required
               />
             </Form.Group>
-
             <Form.Group className="mb-3" controlId="eventTime">
               <Form.Label>Time</Form.Label>
               <Form.Control
@@ -164,7 +286,6 @@ export default function StudentEvents() {
                 onChange={handleNewEventChange}
               />
             </Form.Group>
-
             <Form.Group className="mb-3" controlId="eventLocation">
               <Form.Label>Location</Form.Label>
               <Form.Control
@@ -175,7 +296,6 @@ export default function StudentEvents() {
                 onChange={handleNewEventChange}
               />
             </Form.Group>
-
             <Form.Group className="mb-3" controlId="eventType">
               <Form.Label>Type*</Form.Label>
               <Form.Control
@@ -192,7 +312,6 @@ export default function StudentEvents() {
                 <option value="Other">Other</option>
               </Form.Control>
             </Form.Group>
-
             <Form.Group className="mb-3" controlId="eventDescription">
               <Form.Label>Description</Form.Label>
               <Form.Control
@@ -204,7 +323,6 @@ export default function StudentEvents() {
                 onChange={handleNewEventChange}
               />
             </Form.Group>
-
             <Button variant="primary" type="submit">
               Add Event
             </Button>

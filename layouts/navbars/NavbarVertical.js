@@ -92,8 +92,14 @@ const NavbarVertical = (props) => {
     return (
         <Fragment>
             <SimpleBar style={{ maxHeight: '100vh' }}>
-           <div className="nav-scroller d-flex justify-content-center align-items-center"
-     style={{ color: 'white', height: '60px', fontWeight: 'bold', fontSize: '1.5rem' }}>
+          <div className="nav-scroller d-flex justify-content-center align-items-center"
+  style={{ 
+    color: 'white', 
+    height: '70px', 
+    fontWeight: 'bold', 
+    fontSize: '1.8rem', 
+    paddingTop: '16px' // or marginTop: '8px'
+  }}>
   <Link 
     href="/dashboard"
     style={{ color: 'inherit', textDecoration: 'none' }}
@@ -102,7 +108,6 @@ const NavbarVertical = (props) => {
     AZRUT
   </Link>
 </div>
-
 
               
                 {/* Dashboard Menu */}
