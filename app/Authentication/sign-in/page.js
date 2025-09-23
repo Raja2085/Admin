@@ -1,4 +1,5 @@
 'use client'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Form, Button, Alert } from 'react-bootstrap'
@@ -27,7 +28,9 @@ export default function SignInPage() {
       return
     }
 
-    // Success: redirect or load next page
+    // Store login status and email for session management
+    localStorage.setItem('isAuthenticated', 'true')
+    localStorage.setItem('userEmail', email)
     router.push('/dashboard')
   }
 

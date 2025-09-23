@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { Fragment, useEffect } from "react";
 import Link from "next/link";
@@ -43,6 +43,7 @@ const DashboardPage = () => {
                 <Link href="#" className="btn btn-white">
                   Add Dashboard
                 </Link>
+              
               </div>
             </div>
           </Col>

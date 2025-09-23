@@ -136,7 +136,14 @@ export default function ClassList() {
                   {['coach', 'class_name', 'status', 'level', 'date'].map(field => (
                     <div className="mb-3" key={field}>
                       <label className="form-label">{field.replace('_', ' ').toUpperCase()}</label>
-                      {field === 'status' || field === 'level' ? (
+                      {field === 'class_name' ? (
+                        <select required className="form-select" name={field} value={formData[field]} onChange={handleInputChange}>
+                          <option value="">Select Class</option>
+                          <option value="Java">Java</option>
+                          <option value="Python">Python</option>
+                          <option value="C++">C++</option>
+                        </select>
+                      ) : field === 'status' || field === 'level' ? (
                         <select required className="form-select" name={field} value={formData[field]} onChange={handleInputChange}>
                           <option value="">Select {field}</option>
                           {field === 'status' && <>
