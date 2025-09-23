@@ -105,7 +105,7 @@ const NavbarVertical = (props) => {
     style={{ color: 'inherit', textDecoration: 'none' }}
     className="cursor-pointer"
   >
-    AZRUT
+    AZROUTE
   </Link>
 </div>
 

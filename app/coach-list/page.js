@@ -327,4 +327,4 @@ export default function CoachList() {
       </table>
     </div>
   );
-}
+}     

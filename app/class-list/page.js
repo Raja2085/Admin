@@ -1,368 +1,254 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function ClassList() {
   const [classes, setClasses] = useState([]);
-  const [editingClassId, setEditingClassId] = useState(null);
-  const [adding, setAdding] = useState(false);
-  const [formData, setFormData] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
+    coach: '',
+    class_name: '',
+    status: '',
+    hour: '10',
+    minute: '00',
+    ampm: 'AM',
+    level: '',
+    date: ''
+  });
 
-  // Fetch classes
   useEffect(() => {
-    async function fetchClasses() {
-      const { data, error } = await supabase
-        .from('classlist')
-        .select('*')
-        .order('id');
-      if (error) {
-        alert('Fetch error: ' + error.message);
-        return;
-      }
-      setClasses(data || []);
-    }
     fetchClasses();
   }, []);
 
-  const handleEditClick = (cls) => {
-    setEditingClassId(cls.id);
-    setFormData({ ...cls });
-  };
-
-  const handleCancel = () => {
-    setEditingClassId(null);
-    setAdding(false);
-    setFormData({});
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // ✅ FIXED UPDATE (remove id)
-  const handleUpdateSubmit = async (e) => {
-    e.preventDefault();
-    const { id, ...classBody } = formData; // strip id
+  const fetchClasses = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from('classlist')
-      .update(classBody)
-      .eq('id', editingClassId)
-      .select();
+      .select('*')
+      .order('id');
     if (error) {
-      alert('Update error: ' + error.message);
-      return;
+      alert('Fetch error: ' + error.message);
+      setClasses([]);
+    } else {
+      setClasses(data || []);
     }
-    if (data && data.length) {
-      setClasses((prev) =>
-        prev.map((c) => (c.id === editingClassId ? data[0] : c))
-      );
-    }
-    setEditingClassId(null);
-    setFormData({});
-  };
-
-  const handleDeleteClick = async (id) => {
-    const { error } = await supabase.from('classlist').delete().eq('id', id);
-    if (error) {
-      alert('Delete error: ' + error.message);
-      return;
-    }
-    setClasses((prev) => prev.filter((c) => c.id !== id));
+    setLoading(false);
   };
 
   const handleAddClick = () => {
-    setAdding(true);
+    setEditingId(null);
     setFormData({
       coach: '',
       class_name: '',
       status: '',
-      time: '',
+      hour: '10',
+      minute: '00',
+      ampm: 'AM',
       level: '',
       date: ''
     });
+    setShowForm(true);
   };
 
-  // ✅ FIXED INSERT (ignore id)
-  const handleAddSubmit = async (e) => {
-    e.preventDefault();
-    const { id, ...classBody } = formData; // strip id
-    const { data, error } = await supabase
-      .from('classlist')
-      .insert([classBody])
-      .select();
-    if (error) {
-      alert('Insert error: ' + error.message);
-      return;
+  const handleEditClick = (cls) => {
+    let hour = '10', minute = '00', ampm = 'AM';
+    if (cls.time) {
+      const parts = cls.time.split(/[: ]/);
+      if (parts.length === 3) [hour, minute, ampm] = parts;
     }
-    if (data && data.length) setClasses((prev) => [...prev, data[0]]);
-    setAdding(false);
-    setFormData({});
+    setEditingId(cls.id);
+    setFormData({ ...cls, hour, minute, ampm });
+    setShowForm(true);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+
+    const time = `${formData.hour}:${formData.minute} ${formData.ampm}`;
+    const dbData = { ...formData, time };
+    delete dbData.hour;
+    delete dbData.minute;
+    delete dbData.ampm;
+
+    if (editingId !== null) {
+      const { id, ...updateData } = dbData; // remove id
+      const { error } = await supabase
+        .from('classlist')
+        .update(updateData)
+        .eq('id', editingId);
+      if (error) alert('Update error: ' + error.message);
+    } else {
+      const { error } = await supabase
+        .from('classlist')
+        .insert([dbData]);
+      if (error) alert('Insert error: ' + error.message);
+    }
+
+    setShowForm(false);
+    setEditingId(null);
+    setFormData({
+      coach: '',
+      class_name: '',
+      status: '',
+      hour: '10',
+      minute: '00',
+      ampm: 'AM',
+      level: '',
+      date: ''
+    });
+    fetchClasses();
+  };
+
+  const handleDeleteClick = async (id) => {
+    const { error } = await supabase
+      .from('classlist')
+      .delete()
+      .eq('id', id);
+    if (error) alert('Delete error: ' + error.message);
+    else fetchClasses();
   };
 
   return (
-    <div className="container max-w-6xl bg-white p-5 rounded shadow my-4">
-      <style jsx>{`
-        .class-table {
-          table-layout: auto;
-          width: 100%;
-        }
-        .class-table th,
-        .class-table td {
-          vertical-align: middle;
-          text-align: left;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .class-table th:last-child,
-        .class-table td:last-child {
-          text-align: center;
-        }
-        .action-buttons {
-          display: flex;
-          gap: 8px;
-          justify-content: center;
-        }
-      `}</style>
-
-      <div className="d-flex align-items-center mb-4">
-        <h2 className="h4 fw-semibold">Class List</h2>
-        <div className="ms-auto">
-          {!adding && (
-            <button
-              onClick={handleAddClick}
-              className="btn btn-success mb-3 px-4 py-2 rounded shadow-sm"
-              disabled={editingClassId !== null}
-            >
-              + Add Class
-            </button>
-          )}
-        </div>
+    <div className="container my-4">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="h4 fw-bold">Class List</h2>
+        <button onClick={handleAddClick} className="btn btn-success">+ Add Class</button>
       </div>
 
-      {/* Add Class Form */}
-      {adding && (
-        <form
-          onSubmit={handleAddSubmit}
-          className="mb-4 border p-3 rounded bg-light"
-        >
-          <h5 className="mb-3">Add New Class</h5>
-          <div className="row g-3">
-            <div className="col-md-4">
-              <input
-                type="text"
-                name="coach"
-                className="form-control"
-                placeholder="Coach Name"
-                value={formData.coach}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="col-md-4">
-              <input
-                type="text"
-                name="class_name"
-                className="form-control"
-                placeholder="Class Name"
-                value={formData.class_name}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="col-md-4">
-              <select
-                name="status"
-                className="form-select"
-                value={formData.status}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="">Select Status</option>
-                <option value="Scheduled">Scheduled</option>
-                <option value="Live">Live</option>
-              </select>
-            </div>
-            <div className="col-md-4">
-              <input
-                type="time"
-                name="time"
-                className="form-control"
-                value={formData.time}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="col-md-4">
-              <select
-                name="level"
-                className="form-select"
-                value={formData.level}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="">Select Level</option>
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-              </select>
-            </div>
-            <div className="col-md-4">
-              <input
-                type="date"
-                name="date"
-                className="form-control"
-                value={formData.date}
-                onChange={handleInputChange}
-                required
-              />
+      {/* Modal Form */}
+      {showForm && (
+        <div className="modal fade show d-block custom-modal-overlay">
+          <div className="modal-dialog">
+            <div className="modal-content shadow custom-modal-content">
+              <div className="modal-header custom-modal-header">
+                <h5 className="modal-title">{editingId !== null ? 'Edit Class' : 'Add Class'}</h5>
+                <button type="button" className="btn-close" onClick={() => setShowForm(false)}></button>
+              </div>
+              <form onSubmit={handleFormSubmit}>
+                <div className="modal-body custom-modal-body">
+                  {['coach', 'class_name', 'status', 'level', 'date'].map(field => (
+                    <div className="mb-3" key={field}>
+                      <label className="form-label">{field.replace('_', ' ').toUpperCase()}</label>
+                      {field === 'status' || field === 'level' ? (
+                        <select required className="form-select" name={field} value={formData[field]} onChange={handleInputChange}>
+                          <option value="">Select {field}</option>
+                          {field === 'status' && <>
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Live">Live</option>
+                          </>}
+                          {field === 'level' && <>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                          </>}
+                        </select>
+                      ) : (
+                        <input type={field === 'date' ? 'date' : 'text'} className="form-control" name={field} value={formData[field]} onChange={handleInputChange} required />
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Time selector */}
+                  <div className="mb-3">
+                    <label className="form-label">Time</label>
+                    <div className="d-flex gap-2">
+                      <select name="hour" className="form-select" value={formData.hour} onChange={handleInputChange}>
+                        {Array.from({ length: 12 }, (_, i) => {
+                          const val = (i + 1).toString().padStart(2, '0');
+                          return <option key={i} value={val}>{val}</option>
+                        })}
+                      </select>
+                      <select name="minute" className="form-select" value={formData.minute} onChange={handleInputChange}>
+                        {Array.from({ length: 60 }, (_, i) => {
+                          const val = i.toString().padStart(2, '0');
+                          return <option key={i} value={val}>{val}</option>
+                        })}
+                      </select>
+                      <select name="ampm" className="form-select" value={formData.ampm} onChange={handleInputChange}>
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                      </select>
+                    </div>
+                  </div>
+
+                </div>
+                <div className="modal-footer custom-modal-footer">
+                  <button type="submit" className="btn btn-primary">{editingId !== null ? 'Update' : 'Add'}</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+                </div>
+              </form>
             </div>
           </div>
-          <div className="mt-3">
-            <button type="submit" className="btn btn-primary me-2">
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="btn btn-secondary"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        </div>
       )}
 
       {/* Table */}
-      <table className="table table-bordered table-striped class-table">
-        <thead className="table-secondary">
-          <tr>
-            <th>S.No</th>
-            <th>Coach</th>
-            <th>Class</th>
-            <th>Status</th>
-            <th>Time</th>
-            <th>Level</th>
-            <th>Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {classes.map((cls, idx) => (
-            <tr key={cls.id}>
-              <td>{idx + 1}</td>
-              {editingClassId === cls.id ? (
-                <>
-                  <td>
-                    <input
-                      type="text"
-                      name="coach"
-                      className="form-control"
-                      value={formData.coach}
-                      onChange={handleInputChange}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      name="class_name"
-                      className="form-control"
-                      value={formData.class_name}
-                      onChange={handleInputChange}
-                    />
-                  </td>
-                  <td>
-                    <select
-                      name="status"
-                      className="form-select"
-                      value={formData.status}
-                      onChange={handleInputChange}
-                    >
-                      <option value="Scheduled">Scheduled</option>
-                      <option value="Live">Live</option>
-                    </select>
-                  </td>
-                  <td>
-                    <input
-                      type="time"
-                      name="time"
-                      className="form-control"
-                      value={formData.time}
-                      onChange={handleInputChange}
-                    />
-                  </td>
-                  <td>
-                    <select
-                      name="level"
-                      className="form-select"
-                      value={formData.level}
-                      onChange={handleInputChange}
-                    >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                    </select>
-                  </td>
-                  <td>
-                    <input
-                      type="date"
-                      name="date"
-                      className="form-control"
-                      value={formData.date}
-                      onChange={handleInputChange}
-                    />
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button
-                        onClick={handleUpdateSubmit}
-                        className="btn btn-primary btn-sm me-2"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={handleCancel}
-                        className="btn btn-secondary btn-sm"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </td>
-                </>
-              ) : (
-                <>
-                  <td>{cls.coach}</td>
-                  <td>{cls.class_name}</td>
-                  <td>{cls.status}</td>
-                  <td>{cls.time}</td>
-                  <td>{cls.level}</td>
-                  <td>{cls.date}</td>
-                  <td>
-                    <div className="action-buttons">
-                      <button
-                        onClick={() => handleEditClick(cls)}
-                        className="btn btn-warning btn-sm me-2"
-                        disabled={adding || editingClassId !== null}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(cls.id)}
-                        className="btn btn-danger btn-sm"
-                        disabled={adding || editingClassId !== null}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </>
-              )}
+      {loading ? <p>Loading...</p> : (
+        <table className="table table-bordered table-striped">
+          <thead className="table-secondary">
+            <tr>
+              <th>S.No</th>
+              <th>Coach</th>
+              <th>Class Name</th>
+              <th>Status</th>
+              <th>Time</th>
+              <th>Level</th>
+              <th>Date</th>
+              <th>Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {classes.map((cls, idx) => (
+              <tr key={cls.id}>
+                <td>{idx + 1}</td>
+                <td>{cls.coach}</td>
+                <td>{cls.class_name}</td>
+                <td>{cls.status}</td>
+                <td>{cls.time}</td>
+                <td>{cls.level}</td>
+                <td>{cls.date}</td>
+                <td>
+                  <div className="d-flex gap-2">
+                    <button className="btn btn-warning btn-sm" onClick={() => handleEditClick(cls)}>Edit</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDeleteClick(cls.id)}>Delete</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <style jsx>{`
+        .custom-modal-overlay {
+          background: rgba(0,0,0,0.4);
+          position: fixed !important;
+          top:0; left:0; width:100vw; height:100vh;
+          display:flex; justify-content:center; align-items:center;
+          z-index:1050;
+        }
+        .custom-modal-content {
+          max-height: 80vh;
+          display:flex;
+          flex-direction:column;
+        }
+        .custom-modal-header, .custom-modal-footer {
+          flex-shrink:0;
+          position: sticky;
+          background:#fff;
+          z-index:1;
+        }
+        .custom-modal-header { top:0; }
+        .custom-modal-footer { bottom:0; }
+        .custom-modal-body { overflow-y:auto; max-height:70vh; }
+      `}</style>
     </div>
   );
 }

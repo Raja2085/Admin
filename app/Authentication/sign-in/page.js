@@ -1,5 +1,4 @@
 'use client'
-
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Form, Button, Alert } from 'react-bootstrap'
@@ -15,7 +14,7 @@ export default function SignInPage() {
     e.preventDefault()
     setErrorMsg('')
 
-    // Query your custom signin table
+    // Query signin table for matching credentials
     const { data, error } = await supabase
       .from('signin')
       .select('*')
@@ -25,12 +24,11 @@ export default function SignInPage() {
 
     if (error || !data) {
       setErrorMsg('Invalid email or password')
-    } else {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('isAuthenticated', 'true')
-      }
-      router.push('/dashboard')
+      return
     }
+
+    // Success: redirect or load next page
+    router.push('/dashboard')
   }
 
   return (

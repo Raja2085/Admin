@@ -3,7 +3,7 @@ import Link from 'next/link';
 import 'styles/theme.scss';
 
 export const metadata = {
-    title: 'AZRUT',
+    title: 'AZROUTE',
 };
 
 export default function RootLayout({ children }) {
