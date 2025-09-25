@@ -18,8 +18,13 @@ export default function ClassList() {
     date: ''
   });
 
+  const [coachOptions, setCoachOptions] = useState([]);
+  const [classNameOptions, setClassNameOptions] = useState([]);
+
   useEffect(() => {
     fetchClasses();
+    fetchCoachOptions();
+    fetchClassNameOptions();
   }, []);
 
   const fetchClasses = async () => {
@@ -35,6 +40,28 @@ export default function ClassList() {
       setClasses(data || []);
     }
     setLoading(false);
+  };
+
+  const fetchCoachOptions = async () => {
+    const { data, error } = await supabase
+      .from('coaches')
+      .select('name', { count: 'exact' });
+
+    if (!error) {
+      const uniqueCoaches = [...new Set(data.map(c => c.name))];
+      setCoachOptions(uniqueCoaches);
+    }
+  };
+
+  const fetchClassNameOptions = async () => {
+    const { data, error } = await supabase
+      .from('coaches')
+      .select('specialty', { count: 'exact' });
+
+    if (!error) {
+      const uniqueSpecialties = [...new Set(data.map(c => c.specialty))];
+      setClassNameOptions(uniqueSpecialties);
+    }
   };
 
   const handleAddClick = () => {
@@ -78,7 +105,7 @@ export default function ClassList() {
     delete dbData.ampm;
 
     if (editingId !== null) {
-      const { id, ...updateData } = dbData; // remove id
+      const { id, ...updateData } = dbData; 
       const { error } = await supabase
         .from('classlist')
         .update(updateData)
@@ -122,7 +149,6 @@ export default function ClassList() {
         <button onClick={handleAddClick} className="btn btn-success">+ Add Class</button>
       </div>
 
-      {/* Modal Form */}
       {showForm && (
         <div className="modal fade show d-block custom-modal-overlay">
           <div className="modal-dialog">
@@ -133,36 +159,53 @@ export default function ClassList() {
               </div>
               <form onSubmit={handleFormSubmit}>
                 <div className="modal-body custom-modal-body">
-                  {['coach', 'class_name', 'status', 'level', 'date'].map(field => (
-                    <div className="mb-3" key={field}>
-                      <label className="form-label">{field.replace('_', ' ').toUpperCase()}</label>
-                      {field === 'class_name' ? (
-                        <select required className="form-select" name={field} value={formData[field]} onChange={handleInputChange}>
-                          <option value="">Select Class</option>
-                          <option value="Java">Java</option>
-                          <option value="Python">Python</option>
-                          <option value="C++">C++</option>
-                        </select>
-                      ) : field === 'status' || field === 'level' ? (
-                        <select required className="form-select" name={field} value={formData[field]} onChange={handleInputChange}>
-                          <option value="">Select {field}</option>
-                          {field === 'status' && <>
-                            <option value="Scheduled">Scheduled</option>
-                            <option value="Live">Live</option>
-                          </>}
-                          {field === 'level' && <>
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                          </>}
-                        </select>
-                      ) : (
-                        <input type={field === 'date' ? 'date' : 'text'} className="form-control" name={field} value={formData[field]} onChange={handleInputChange} required />
-                      )}
-                    </div>
-                  ))}
+                  <div className="mb-3">
+                    <label className="form-label">Coach</label>
+                    <select
+                      required
+                      className="form-select"
+                      name="coach"
+                      value={formData.coach}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select Coach</option>
+                      {coachOptions.map((coach, idx) => (
+                        <option key={idx} value={coach}>{coach}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                  {/* Time selector */}
+                  <div className="mb-3">
+                    <label className="form-label">Class Name</label>
+                    <select
+                      required
+                      className="form-select"
+                      name="class_name"
+                      value={formData.class_name}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select Class</option>
+                      {classNameOptions.map((cls, idx) => (
+                        <option key={idx} value={cls}>{cls}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Status</label>
+                    <select
+                      required
+                      className="form-select"
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select Status</option>
+                      <option value="Scheduled">Scheduled</option>
+                      <option value="Live">Live</option>
+                    </select>
+                  </div>
+
                   <div className="mb-3">
                     <label className="form-label">Time</label>
                     <div className="d-flex gap-2">
@@ -185,6 +228,33 @@ export default function ClassList() {
                     </div>
                   </div>
 
+                  <div className="mb-3">
+                    <label className="form-label">Level</label>
+                    <select
+                      required
+                      className="form-select"
+                      name="level"
+                      value={formData.level}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select Level</option>
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                    </select>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Date</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      name="date"
+                      value={formData.date}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="modal-footer custom-modal-footer">
                   <button type="submit" className="btn btn-primary">{editingId !== null ? 'Update' : 'Add'}</button>

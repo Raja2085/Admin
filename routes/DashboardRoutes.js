@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid';
-import { FaCalendarCheck } from 'react-icons/fa';
+import { FaCalendarCheck, FaSchool } from 'react-icons/fa';
 import {
   FaHome,
   FaUsers,
@@ -32,6 +32,12 @@ export const DashboardMenu = [
     icon: <FaChalkboardTeacher />,
     link: '/coach-list'
   },
+   {
+    id: uuid(),
+    title: 'Course Register',
+    icon: <FaSchool/> ,
+    link: '/course-students'
+  },
   {
     id: uuid(),
     title: 'Payment',
@@ -47,7 +53,7 @@ export const DashboardMenu = [
   {
     id: uuid(),
     title: 'Marks',
-    icon: <FaClipboardList />,
+      icon: <FaUserGraduate/>,
     children: [
       { id: uuid(), link: '/marks', name: 'Marks', icon: <FaFileAlt /> },
       { id: uuid(), link: '/marks/add', name: 'Add Marks', icon: <FaFileAlt /> }

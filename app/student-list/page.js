@@ -26,7 +26,7 @@ const initialIndividual = {
   place: '',
   class_type: '',
   group_name: '',
-  members: [{ name: '', reg_no: '', dob: '', email: '', phone: '', place: '' }],
+  members: [{ name: '', reg_no: generateRegNo(), dob: '', email: '', phone: '', place: '' }],
 };
 
 export default function StudentList() {
@@ -40,6 +40,7 @@ export default function StudentList() {
   const [editingStudentId, setEditingStudentId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [inlineEditingId, setInlineEditingId] = useState(null);
+  const [courseOptions, setCourseOptions] = useState([]);
 
   const editInputStyle = {
     height: '32px',
@@ -54,6 +55,7 @@ export default function StudentList() {
 
   useEffect(() => {
     fetchStudents();
+    fetchCourseOptions();
   }, []);
 
   async function fetchStudents() {
@@ -68,6 +70,15 @@ export default function StudentList() {
       console.error('Fetch students error:', error);
       setStudents([]);
       setFilteredStudents([]);
+    }
+  }
+
+  async function fetchCourseOptions() {
+    const { data, error } = await supabase
+      .from('classlist')
+      .select('class_name');
+    if (!error) {
+      setCourseOptions((data || []).map(row => row.class_name));
     }
   }
 
@@ -95,9 +106,10 @@ export default function StudentList() {
     setClassTypeFilter(e.target.value.toLowerCase());
   }
 
+  // Fix here: generate Reg No once when opening modal
   function openAddModal() {
     setMode('add');
-    setFormData({ ...initialIndividual, class_type: '' });
+    setFormData({ ...initialIndividual, class_type: '', reg_no: generateRegNo() });
     setShowForm(true);
     setEditingStudentId(null);
   }
@@ -115,6 +127,8 @@ export default function StudentList() {
       place: student.place || '',
       class_type: student.class_type || '',
       group_name: student.group_name || '',
+      course: student.course || '',
+      level: student.level || '',
     });
     setShowForm(true);
   }
@@ -133,12 +147,12 @@ export default function StudentList() {
       setFormData({
         class_type: 'Group',
         group_name: '',
-        members: [{ name: '', reg_no: '', dob: '', email: '', phone: '', place: '' }],
+        members: [{ name: '', reg_no: generateRegNo(), dob: '', email: '', phone: '', place: '' }],
       });
       return;
     }
     if (name === 'class_type' && value === 'Individual') {
-      setFormData({ ...initialIndividual, class_type: 'Individual' });
+      setFormData({ ...initialIndividual, class_type: 'Individual', reg_no: generateRegNo() });
       return;
     }
     setFormData((prev) => {
@@ -160,10 +174,14 @@ export default function StudentList() {
     }));
   }
 
+  // Fix here: assign reg_no once when adding a member
   function handleAddMember() {
     setFormData((prev) => ({
       ...prev,
-      members: [...(prev.members || []), { name: '', reg_no: '', dob: '', email: '', phone: '', place: '' }],
+      members: [
+        ...(prev.members || []),
+        { name: '', reg_no: generateRegNo(), dob: '', email: '', phone: '', place: '' },
+      ],
     }));
   }
 
@@ -174,18 +192,12 @@ export default function StudentList() {
     }));
   }
 
-  // Helper to generate last 20 dates including today formatted as 'YYYY-MM-DD'
-  function getLast20Dates() {
-    return Array.from({ length: 20 }, (_, i) => {
+  async function initializeAttendanceForStudent(studentId) {
+    const attendanceDates = Array.from({ length: 20 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (19 - i));
       return d.toISOString().slice(0, 10);
     });
-  }
-
-  // Insert default attendance as 'A' for absent for all dates for given student_id
-  async function initializeAttendanceForStudent(studentId) {
-    const attendanceDates = getLast20Dates();
     const attendanceData = attendanceDates.map((date) => ({
       student_id: studentId,
       attendance_date: date,
@@ -224,7 +236,6 @@ export default function StudentList() {
       return;
     }
 
-    // For Group type
     const members = (formData.members || []).map((m) => ({
       ...m,
       reg_no: m.reg_no || generateRegNo(),
@@ -271,6 +282,8 @@ export default function StudentList() {
       class_type: formData.class_type || 'Individual',
       group_name: formData.group_name || null,
       reg_no: formData.reg_no,
+      course: formData.course,
+      level: formData.level,
     };
     const { error } = await supabase.from('student_list').update(updates).eq('id', id);
     if (error) {
@@ -317,7 +330,6 @@ export default function StudentList() {
     }
   }
 
-  // Render
   return (
     <div className="container mt-4">
       <h2>Student List</h2>
@@ -345,7 +357,6 @@ export default function StudentList() {
         </Col>
       </Row>
 
-      {/* Modal for add/edit student */}
       {showForm && (
         <div className="modal fade show d-block custom-modal-overlay">
           <div className="modal-dialog modal-lg">
@@ -394,13 +405,19 @@ export default function StudentList() {
                                         <Col md={4}>
                                           <Form.Group>
                                             <Form.Label>Name</Form.Label>
-                                            <Form.Control placeholder="Name" name="name" value={member.name} onChange={(e) => handleMemberChange(idx, e)} required />
+                                            <Form.Control 
+                                              placeholder="Name" 
+                                              name="name" 
+                                              value={member.name} 
+                                              onChange={(e) => handleMemberChange(idx, e)} 
+                                              required 
+                                            />
                                           </Form.Group>
                                         </Col>
                                         <Col md={4}>
                                           <Form.Group>
                                             <Form.Label>Reg No (auto)</Form.Label>
-                                            <Form.Control placeholder="Reg No (auto)" name="reg_no" value={member.reg_no || generateRegNo()} disabled />
+                                            <Form.Control placeholder="Reg No (auto)" name="reg_no" value={member.reg_no} disabled />
                                           </Form.Group>
                                         </Col>
                                         <Col md={4}>
@@ -421,7 +438,15 @@ export default function StudentList() {
                                         <Col md={4}>
                                           <Form.Group>
                                             <Form.Label>Phone</Form.Label>
-                                            <Form.Control type="tel" placeholder="Phone" name="phone" value={member.phone} maxLength={10} onInput={(e) => (e.target.value = e.target.value.replace(/[^0-9]/g, ''))} onChange={(e) => handleMemberChange(idx, e)} />
+                                            <Form.Control 
+                                              type="tel" 
+                                              placeholder="Phone" 
+                                              name="phone" 
+                                              value={member.phone} 
+                                              maxLength={10} 
+                                              onInput={(e) => (e.target.value = e.target.value.replace(/[^0-9]/g, ''))} 
+                                              onChange={(e) => handleMemberChange(idx, e)} 
+                                            />
                                           </Form.Group>
                                         </Col>
                                         <Col md={4}>
@@ -464,7 +489,7 @@ export default function StudentList() {
                           <Col md={4}>
                             <Form.Group className="mb-2">
                               <Form.Label>Reg No</Form.Label>
-                              <Form.Control name="reg_no" value={formData.reg_no || generateRegNo()} onChange={handleAddInputChange} required />
+                              <Form.Control name="reg_no" value={formData.reg_no} onChange={handleAddInputChange} required />
                             </Form.Group>
                           </Col>
                           <Col md={4}>
@@ -495,7 +520,6 @@ export default function StudentList() {
                       )}
                     </>
                   ) : (
-                    // Edit mode
                     <Row>
                       <Col md={6}>
                         <Form.Group className="mb-2">
@@ -550,6 +574,35 @@ export default function StudentList() {
                           </Form.Group>
                         </Col>
                       )}
+                      <Col md={6}>
+                        <Form.Group className="mb-2">
+                          <Form.Label>Course</Form.Label>
+                          <Form.Select
+                            name="course"
+                            value={formData.course || ''}
+                            onChange={handleEditInputChange}
+                            required
+                          >
+                            <option value="">Select Course</option>
+                            {courseOptions.map((course, idx) => (
+                              <option key={idx} value={course}>
+                                {course}
+                              </option>
+                            ))}
+                          </Form.Select>
+                        </Form.Group>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group className="mb-2">
+                          <Form.Label>Level</Form.Label>
+                          <Form.Select name="level" value={formData.level || ''} onChange={handleEditInputChange}>
+                            <option value="">Select Level</option>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                          </Form.Select>
+                        </Form.Group>
+                      </Col>
                     </Row>
                   )}
                 </div>
@@ -563,7 +616,6 @@ export default function StudentList() {
         </div>
       )}
 
-      {/* Student Table */}
       <Table
         bordered
         hover
@@ -572,7 +624,6 @@ export default function StudentList() {
           tableLayout: 'fixed',
           wordBreak: 'break-word',
           fontSize: '0.82rem',
-          whiteSpace: 'nowrap',
         }}
       >
         <thead>
@@ -597,11 +648,26 @@ export default function StudentList() {
             filteredStudents.map((student) => (
               <tr key={student.id}>
                 <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{student.reg_no}</td>
-                <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <td style={{ whiteSpace: 'normal', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {inlineEditingId === student.id ? (
-                    <Form.Control style={editInputStyle} name="name" value={editFormData.name || ''} onChange={(e) => setEditFormData((prev) => ({ ...prev, name: e.target.value }))} />
+                    <Form.Control
+                      style={editInputStyle}
+                      name="name"
+                      value={editFormData.name || ''}
+                      onChange={(e) =>
+                        setEditFormData((prev) => ({ ...prev, name: e.target.value }))
+                      }
+                    />
                   ) : (
-                    student.name
+                    <div>
+                      {student.name}
+                      {student.level && student.level.trim() !== '' && (
+                        <>
+                          <br />
+                          <span style={{ fontSize: '0.9em', color: '#888' }}>({student.level})</span>
+                        </>
+                      )}
+                    </div>
                   )}
                 </td>
                 <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

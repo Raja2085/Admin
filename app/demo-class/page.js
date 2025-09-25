@@ -18,8 +18,13 @@ export default function DemoClasses() {
     description: ''
   });
 
+  const [coachOptions, setCoachOptions] = useState([]);
+  const [classTitleOptions, setClassTitleOptions] = useState([]);
+
   useEffect(() => {
     fetchClasses();
+    fetchCoachOptions();
+    fetchClassTitleOptions();
   }, []);
 
   const fetchClasses = async () => {
@@ -38,20 +43,49 @@ export default function DemoClasses() {
     setLoading(false);
   };
 
+  // Fetch coach names for dropdown
+  const fetchCoachOptions = async () => {
+    const { data, error } = await supabase
+      .from('coaches')
+      .select('name');
+
+    if (!error) {
+      const uniqueCoaches = [...new Set(data.map(c => c.name))];
+      setCoachOptions(uniqueCoaches);
+    }
+  };
+
+  // Fetch specialties for Class Title dropdown
+  const fetchClassTitleOptions = async () => {
+    const { data, error } = await supabase
+      .from('coaches')
+      .select('specialty');
+
+    if (!error) {
+      const uniqueSpecialties = [...new Set(data.map(c => c.specialty))];
+      setClassTitleOptions(uniqueSpecialties);
+    }
+  };
+
   const handleAddClick = () => {
     setEditingClass(null);
     setFormData({
-      title: '', coach: '', hour: '10', minute: '00', ampm: 'AM',
-      duration: '', level: '', description: ''
+      title: '',
+      coach: '',
+      hour: '10',
+      minute: '00',
+      ampm: 'AM',
+      duration: '',
+      level: '',
+      description: ''
     });
     setShowForm(true);
   };
 
   const handleEditClick = (cls) => {
-    // Parse stored time into hour/minute/AMPM
     let hour = '10', minute = '00', ampm = 'AM';
     if (cls.time) {
-      const parts = cls.time.split(/[: ]/); // e.g., "10:30 AM"
+      const parts = cls.time.split(/[: ]/);
       if (parts.length === 3) {
         [hour, minute, ampm] = parts;
       }
@@ -69,7 +103,6 @@ export default function DemoClasses() {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
 
-    // Merge hour/minute/AMPM into time string
     const time = `${formData.hour}:${formData.minute} ${formData.ampm}`;
     const dbData = { ...formData, time };
     delete dbData.hour;
@@ -92,8 +125,14 @@ export default function DemoClasses() {
     setShowForm(false);
     setEditingClass(null);
     setFormData({
-      title: '', coach: '', hour: '10', minute: '00', ampm: 'AM',
-      duration: '', level: '', description: ''
+      title: '',
+      coach: '',
+      hour: '10',
+      minute: '00',
+      ampm: 'AM',
+      duration: '',
+      level: '',
+      description: ''
     });
     fetchClasses();
   };
@@ -124,38 +163,63 @@ export default function DemoClasses() {
               </div>
               <form onSubmit={handleFormSubmit}>
                 <div className="modal-body custom-modal-body">
-                  {[
-                    { label: 'Class Title', name: 'title', type: 'text' },
-                    { label: 'Coach Name', name: 'coach', type: 'text' },
-                    { label: 'Duration', name: 'duration', type: 'text', placeholder: 'e.g. 1 hr' },
-                    { label: 'Description', name: 'description', type: 'textarea' }
-                  ].map(field => (
-                    <div className="mb-3" key={field.name}>
-                      <label className="form-label">{field.label}</label>
-                      {field.type === 'textarea' ? (
-                        <textarea
-                          required
-                          name={field.name}
-                          rows={3}
-                          className="form-control"
-                          value={formData[field.name]}
-                          onChange={handleInputChange}
-                        ></textarea>
-                      ) : (
-                        <input
-                          required
-                          type={field.type}
-                          name={field.name}
-                          placeholder={field.placeholder || ''}
-                          className="form-control"
-                          value={formData[field.name]}
-                          onChange={handleInputChange}
-                        />
-                      )}
-                    </div>
-                  ))}
+                  <div className="mb-3">
+                    <label className="form-label">Class Title</label>
+                    <select
+                      required
+                      className="form-select"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select Class Title</option>
+                      {classTitleOptions.map((title, idx) => (
+                        <option key={idx} value={title}>{title}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                  {/* Time Selector */}
+                  <div className="mb-3">
+                    <label className="form-label">Coach Name</label>
+                    <select
+                      required
+                      className="form-select"
+                      name="coach"
+                      value={formData.coach}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select Coach</option>
+                      {coachOptions.map((coach, idx) => (
+                        <option key={idx} value={coach}>{coach}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Duration</label>
+                    <input
+                      required
+                      type="text"
+                      name="duration"
+                      placeholder="e.g. 1 hr"
+                      className="form-control"
+                      value={formData.duration}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Description</label>
+                    <textarea
+                      required
+                      name="description"
+                      rows={3}
+                      className="form-control"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
                   <div className="mb-3">
                     <label className="form-label">Time</label>
                     <div className="d-flex gap-2">
@@ -184,9 +248,9 @@ export default function DemoClasses() {
                     <label className="form-label">Level</label>
                     <select name="level" required className="form-select" value={formData.level} onChange={handleInputChange}>
                       <option value="">Select Level</option>
-                      <option value="Beginner">Beginner</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Advanced">Advanced</option>
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
                     </select>
                   </div>
                 </div>

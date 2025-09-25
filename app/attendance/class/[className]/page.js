@@ -22,11 +22,11 @@ const StudentTable = () => {
     async function fetchData() {
       setLoading(true);
       try {
-        // Get students for selected class
+        // Fetch students for given course
         const { data: studentData, error: studentError } = await supabase
           .from('student_list')
           .select('id, name, reg_no')
-          .eq('class_type', className);
+          .eq('course', className);
 
         if (studentError) throw studentError;
 
@@ -39,7 +39,7 @@ const StudentTable = () => {
           return;
         }
 
-        // Get attendance records for students filtered by selectedDate if set
+        // Fetch attendance for these students filtered by class_type and optionally selectedDate
         const studentIds = studentData.map(s => s.id);
         let attendanceQuery = supabase
           .from('attendance')
@@ -52,11 +52,10 @@ const StudentTable = () => {
         }
 
         const { data: attendanceData, error: attendanceError } = await attendanceQuery;
+
         if (attendanceError) throw attendanceError;
 
-
-        
-        // Extract unique attendance dates for table headings
+        // Unique dates for table headers
         let uniqueDates = [];
         if (selectedDate) {
           uniqueDates = [selectedDate];
@@ -65,7 +64,7 @@ const StudentTable = () => {
         }
         setAttendanceDates(uniqueDates);
 
-        // Map attendance: {student_id: {date: status}}
+        // Build attendance map
         const amap = {};
         (attendanceData || []).forEach(({ student_id, attendance_date, status }) => {
           if (!amap[student_id]) amap[student_id] = {};
@@ -84,7 +83,7 @@ const StudentTable = () => {
     fetchData();
   }, [className, selectedDate]);
 
-  // Calculate present and absent students for summary cards
+  // Calculate attendance summary count
   let totalPresent = 0, totalAbsent = 0;
   students.forEach(s => {
     totalPresent += attendanceDates.filter(date => attendanceMap[s.id]?.[date] === 'P').length;

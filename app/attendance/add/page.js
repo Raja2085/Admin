@@ -1,15 +1,13 @@
 'use client';
-
-import { useRouter } from 'next/navigation'; // <-- Import router
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { Container, Form, Button, Alert, Table } from 'react-bootstrap';
-
-const CLASS_OPTIONS = ['Java', 'Python', 'C++'];
+import { useRouter } from 'next/navigation';
 
 export default function AttendancePage() {
-  const router = useRouter(); // <-- Initialize router
+  const router = useRouter();
   const [students, setStudents] = useState([]);
+  const [classOptions, setClassOptions] = useState([]);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [attendanceData, setAttendanceData] = useState({});
@@ -17,15 +15,46 @@ export default function AttendancePage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    async function fetchStudents() {
+    // Fetch distinct classes dynamically from student_list table
+    const fetchDistinctClasses = async () => {
+      setError('');
+      let { data, error } = await supabase
+        .from('student_list')
+        .select('course', { count: 'exact', head: false })
+        .neq('course', '') // omit empty courses if any
+        .order('course', { ascending: true })
+        .limit(1000);
+
+      if (error) {
+        setError(error.message);
+      } else {
+        // Extract unique courses only
+        const distinctCourses = [...new Set(data.map((record) => record.course))];
+        setClassOptions(distinctCourses);
+      }
+    };
+
+    fetchDistinctClasses();
+  }, []); // Run on mount only
+
+  useEffect(() => {
+    // Fetch students filtered by selected class dynamically
+    const fetchStudentsByClass = async () => {
+      setError('');
+      if (!selectedClass) {
+        setStudents([]);
+        return;
+      }
       const { data, error } = await supabase
         .from('student_list')
-        .select('id, name');
+        .select('id, name')
+        .eq('course', selectedClass);
+
       if (error) setError(error.message);
       else setStudents(data || []);
-    }
-    fetchStudents();
-  }, []);
+    };
+    fetchStudentsByClass();
+  }, [selectedClass]);
 
   const handleStatusChange = (studentId, status) => {
     setAttendanceData((prev) => ({ ...prev, [studentId]: status }));
@@ -34,6 +63,7 @@ export default function AttendancePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
     if (!selectedDate) {
       setError('Select a date');
       return;
@@ -42,11 +72,17 @@ export default function AttendancePage() {
       setError('Select a class');
       return;
     }
+    if (students.length === 0) {
+      setError('No students found for the selected class');
+      return;
+    }
+
     setSaving(true);
+
     const records = students.map((stu) => ({
       student_id: stu.id,
       attendance_date: selectedDate,
-      status: attendanceData[stu.id] || 'A',
+      status: attendanceData[stu.id] || 'A', // Default Absent
       class_type: selectedClass,
     }));
 
@@ -59,7 +95,7 @@ export default function AttendancePage() {
     if (error) {
       setError(error.message);
     } else {
-      router.push('/attendance'); // <-- Redirect to summary page
+      router.push('/attendance'); // Redirect after saving
     }
   };
 
@@ -70,22 +106,13 @@ export default function AttendancePage() {
       <Form onSubmit={handleSubmit}>
         <Form.Group className="mb-3">
           <Form.Label>Select Date</Form.Label>
-          <Form.Control
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            required
-          />
+          <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} required />
         </Form.Group>
         <Form.Group className="mb-3">
           <Form.Label>Select Class</Form.Label>
-          <Form.Select
-            value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
-            required
-          >
+          <Form.Select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} required>
             <option value="">-- Select Class --</option>
-            {CLASS_OPTIONS.map((c) => (
+            {classOptions.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -100,10 +127,10 @@ export default function AttendancePage() {
             </tr>
           </thead>
           <tbody>
-            {students.length === 0 && (
+            {selectedClass && students.length === 0 && (
               <tr>
                 <td colSpan="2" className="text-center">
-                  Loading students...
+                  No students found for this class.
                 </td>
               </tr>
             )}
