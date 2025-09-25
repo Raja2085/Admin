@@ -12,33 +12,45 @@ const AttendanceClassSummary = () => {
   const [toDate, setToDate] = useState('');
   const [filterParams, setFilterParams] = useState({ searchTerm: '', from: '', to: '' });
   const [records, setRecords] = useState([]);
+  const [totalStudentsCount, setTotalStudentsCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Fetch total unique student count from student_list (independent of attendance filter)
+  useEffect(() => {
+    async function fetchTotalStudents() {
+      try {
+        const { count, error } = await supabase
+          .from('student_list')
+          .select('id', { count: 'exact', head: true });
+        if (error) throw error;
+        setTotalStudentsCount(count || 0);
+      } catch (e) {
+        setTotalStudentsCount(0);
+      }
+    }
+    fetchTotalStudents();
+  }, []);
+
+  // Fetch attendance records based on filters
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       setError(null);
       try {
         let query = supabase.from('attendance').select('student_id, attendance_date, status, class_type');
-
-        if (filterParams.from) {
-          query = query.gte('attendance_date', filterParams.from);
-        }
-        if (filterParams.to) {
-          query = query.lte('attendance_date', filterParams.to);
-        }
+        if (filterParams.from) query = query.gte('attendance_date', filterParams.from);
+        if (filterParams.to) query = query.lte('attendance_date', filterParams.to);
 
         const { data, error } = await query;
         if (error) throw error;
 
         let filtered = data || [];
         if (filterParams.searchTerm) {
-          filtered = filtered.filter(r =>
-            r.class_type && r.class_type.toLowerCase().includes(filterParams.searchTerm.toLowerCase())
+          filtered = filtered.filter(
+            r => r.class_type && r.class_type.toLowerCase().includes(filterParams.searchTerm.toLowerCase())
           );
         }
-
         setRecords(filtered);
       } catch (e) {
         setError(e.message);
@@ -49,21 +61,21 @@ const AttendanceClassSummary = () => {
     fetchData();
   }, [filterParams]);
 
+  // Calculate attendance summary for filtered records
+  const uniqueStudentIds = new Set(records.map(r => r.student_id));
+  const totalPresent = records.filter(r => r.status === 'P').length;
+  const totalAbsent = records.filter(r => r.status === 'A').length;
+
   const allClasses = Array.from(new Set(records.map(r => r.class_type)));
-  const filteredClasses = allClasses.filter(c => ['Java', 'Python', 'C++'].includes(c));
+  const filteredClasses = allClasses;
   const classGroups = filteredClasses.map(className => {
     const classRecords = records.filter(r => r.class_type === className);
     const studentIds = new Set(classRecords.map(r => r.student_id));
     const present = classRecords.filter(r => r.status === 'P').length;
     const absent = classRecords.filter(r => r.status === 'A').length;
-    const percentage =
-      present + absent > 0 ? ((present / (present + absent)) * 100).toFixed(1) : '0.0';
+    const percentage = present + absent > 0 ? ((present / (present + absent)) * 100).toFixed(1) : '0.0';
     return { className, total: studentIds.size, present, absent, percentage };
   });
-
-  const summaryTotal = classGroups.reduce((sum, g) => sum + g.total, 0);
-  const summaryPresent = classGroups.reduce((sum, g) => sum + g.present, 0);
-  const summaryAbsent = classGroups.reduce((sum, g) => sum + g.absent, 0);
 
   return (
     <Container fluid className="p-4">
@@ -75,7 +87,7 @@ const AttendanceClassSummary = () => {
           <Card className="shadow" style={{ background: '#6C63FF', color: '#fff' }}>
             <Card.Body>
               <Card.Title><FaUsers /> Total Students</Card.Title>
-              <Card.Text style={{ fontSize: 32, fontWeight: 700 }}>{summaryTotal}</Card.Text>
+              <Card.Text style={{ fontSize: 32, fontWeight: 700 }}>{totalStudentsCount}</Card.Text>
             </Card.Body>
           </Card>
         </Col>
@@ -83,7 +95,7 @@ const AttendanceClassSummary = () => {
           <Card className="shadow" style={{ background: '#27ae60', color: '#fff' }}>
             <Card.Body>
               <Card.Title><FaUserCheck /> Present</Card.Title>
-              <Card.Text style={{ fontSize: 32, fontWeight: 700 }}>{summaryPresent}</Card.Text>
+              <Card.Text style={{ fontSize: 32, fontWeight: 700 }}>{totalPresent}</Card.Text>
             </Card.Body>
           </Card>
         </Col>
@@ -91,7 +103,7 @@ const AttendanceClassSummary = () => {
           <Card className="shadow" style={{ background: '#e74c3c', color: '#fff' }}>
             <Card.Body>
               <Card.Title><FaUserTimes /> Absent</Card.Title>
-              <Card.Text style={{ fontSize: 32, fontWeight: 700 }}>{summaryAbsent}</Card.Text>
+              <Card.Text style={{ fontSize: 32, fontWeight: 700 }}>{totalAbsent}</Card.Text>
             </Card.Body>
           </Card>
         </Col>
@@ -116,7 +128,13 @@ const AttendanceClassSummary = () => {
       <Table bordered hover responsive className="shadow-sm text-center align-middle">
         <thead className="table-dark">
           <tr>
-            <th>#</th><th>Class</th><th>Total Students</th><th><FaUserCheck /> Present</th><th><FaUserTimes /> Absent</th><th>Attendance %</th><th>Action</th>
+            <th>#</th>
+            <th>Class</th>
+            <th>Total Students</th>
+            <th><FaUserCheck /> Present</th>
+            <th><FaUserTimes /> Absent</th>
+            <th>Attendance %</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>

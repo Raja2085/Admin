@@ -1,16 +1,18 @@
 'use client';
-
 import { useSearchParams, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Container, Row, Col, Table, Card } from 'react-bootstrap';
 import { FaUserCheck, FaUserTimes, FaUsers } from 'react-icons/fa';
 import { supabase } from '../../../../lib/supabaseClient';
+import dayjs from 'dayjs';
 
 const StudentTable = () => {
   const params = useParams();
   const searchParams = useSearchParams();
 
   const selectedDate = searchParams.get('date');
+  const fromDate = searchParams.get('from');
+  const toDate = searchParams.get('to');
   const className = decodeURIComponent(params.className);
 
   const [students, setStudents] = useState([]);
@@ -22,16 +24,14 @@ const StudentTable = () => {
     async function fetchData() {
       setLoading(true);
       try {
-        // Fetch students for given course
+        // Fetch students for the given course
         const { data: studentData, error: studentError } = await supabase
           .from('student_list')
           .select('id, name, reg_no')
           .eq('course', className);
 
         if (studentError) throw studentError;
-
         setStudents(studentData || []);
-
         if (!studentData || studentData.length === 0) {
           setAttendanceMap({});
           setAttendanceDates([]);
@@ -39,7 +39,7 @@ const StudentTable = () => {
           return;
         }
 
-        // Fetch attendance for these students filtered by class_type and optionally selectedDate
+        // Prepare attendance query for selected filter or current month
         const studentIds = studentData.map(s => s.id);
         let attendanceQuery = supabase
           .from('attendance')
@@ -47,24 +47,48 @@ const StudentTable = () => {
           .eq('class_type', className)
           .in('student_id', studentIds);
 
-        if (selectedDate) {
+        if (fromDate && toDate) {
+          attendanceQuery = attendanceQuery
+            .gte('attendance_date', fromDate)
+            .lte('attendance_date', toDate);
+        } else if (selectedDate) {
           attendanceQuery = attendanceQuery.eq('attendance_date', selectedDate);
+        } else {
+          // Default to current month
+          const monthStart = dayjs().startOf('month').format('YYYY-MM-DD');
+          const monthEnd = dayjs().endOf('month').format('YYYY-MM-DD');
+          attendanceQuery = attendanceQuery
+            .gte('attendance_date', monthStart)
+            .lte('attendance_date', monthEnd);
         }
 
         const { data: attendanceData, error: attendanceError } = await attendanceQuery;
-
         if (attendanceError) throw attendanceError;
 
-        // Unique dates for table headers
+        // Generate list of dates to display as columns
         let uniqueDates = [];
         if (selectedDate) {
           uniqueDates = [selectedDate];
+        } else if (fromDate && toDate) {
+          let curr = dayjs(fromDate);
+          const last = dayjs(toDate);
+          while (curr.isBefore(last) || curr.isSame(last, 'day')) {
+            uniqueDates.push(curr.format('YYYY-MM-DD'));
+            curr = curr.add(1, 'day');
+          }
         } else {
-          uniqueDates = Array.from(new Set(attendanceData?.map(a => a.attendance_date) || [])).sort();
+          // Current month
+          let curr = dayjs().startOf('month');
+          const last = dayjs().endOf('month');
+          while (curr.isBefore(last) || curr.isSame(last, 'day')) {
+            uniqueDates.push(curr.format('YYYY-MM-DD'));
+            curr = curr.add(1, 'day');
+          }
         }
+        uniqueDates = uniqueDates.sort();
         setAttendanceDates(uniqueDates);
 
-        // Build attendance map
+        // Build attendance map: attendanceMap[student_id][date] = 'P' or 'A'
         const amap = {};
         (attendanceData || []).forEach(({ student_id, attendance_date, status }) => {
           if (!amap[student_id]) amap[student_id] = {};
@@ -81,9 +105,9 @@ const StudentTable = () => {
       }
     }
     fetchData();
-  }, [className, selectedDate]);
+  }, [className, fromDate, toDate, selectedDate]);
 
-  // Calculate attendance summary count
+  // Calculate attendance summary counts
   let totalPresent = 0, totalAbsent = 0;
   students.forEach(s => {
     totalPresent += attendanceDates.filter(date => attendanceMap[s.id]?.[date] === 'P').length;
@@ -92,7 +116,12 @@ const StudentTable = () => {
 
   return (
     <Container fluid className="p-4">
-      <h3 className="mb-4">{className} Attendance Details {selectedDate ? `(${new Date(selectedDate).toLocaleDateString('en-GB')})` : ''}</h3>
+      <h3 className="mb-4">
+        {className} Attendance Details
+        {selectedDate ? ` (${dayjs(selectedDate).format('DD/MM/YYYY')})` : ''}
+        {(!selectedDate && fromDate && toDate) ? ` (${dayjs(fromDate).format('DD/MM/YYYY')} to ${dayjs(toDate).format('DD/MM/YYYY')})` : ''}
+        {(!selectedDate && !fromDate && !toDate) ? ` (${dayjs().format('MMMM YYYY')})` : ''}
+      </h3>
       {loading ? <p>Loading...</p> : (
         <>
           <Row className="mb-4">
@@ -121,7 +150,6 @@ const StudentTable = () => {
               </Card>
             </Col>
           </Row>
-
           <Table bordered hover responsive className="shadow-sm text-center align-middle">
             <thead className="table-dark">
               <tr>
@@ -130,7 +158,7 @@ const StudentTable = () => {
                 <th>Student Name</th>
                 {attendanceDates.map(date => (
                   <th key={date}>
-                    Status<br />({new Date(date).toLocaleDateString('en-GB')})
+                    Status<br />({dayjs(date).format('DD/MM/YYYY')})
                   </th>
                 ))}
                 {attendanceDates.length > 1 && <th>Attendance %</th>}
@@ -138,14 +166,17 @@ const StudentTable = () => {
             </thead>
             <tbody>
               {students.length === 0 ? (
-                <tr><td colSpan={3 + attendanceDates.length + (attendanceDates.length > 1 ? 1 : 0)} className="text-center">No students found for {className}</td></tr>
+                <tr>
+                  <td colSpan={3 + attendanceDates.length + (attendanceDates.length > 1 ? 1 : 0)} className="text-center">
+                    No students found for {className}
+                  </td>
+                </tr>
               ) : (
                 students.map((s, idx) => {
                   const presentDays = attendanceDates.filter(date => attendanceMap[s.id]?.[date] === 'P').length;
                   const attendancePercentage = attendanceDates.length > 0
                     ? ((presentDays / attendanceDates.length) * 100).toFixed(1)
                     : '0.0';
-
                   return (
                     <tr key={s.id}>
                       <td>{idx + 1}</td>
@@ -154,10 +185,10 @@ const StudentTable = () => {
                       {attendanceDates.map(date => (
                         <td key={date} className={
                           attendanceMap[s.id]?.[date] === 'P' ? 'text-success' :
-                          attendanceMap[s.id]?.[date] === 'A' ? 'text-danger' : ''
+                            attendanceMap[s.id]?.[date] === 'A' ? 'text-danger' : ''
                         }>
                           {attendanceMap[s.id]?.[date] === 'P' ? 'Present' :
-                           attendanceMap[s.id]?.[date] === 'A' ? 'Absent' : '-'}
+                            attendanceMap[s.id]?.[date] === 'A' ? 'Absent' : '-'}
                         </td>
                       ))}
                       {attendanceDates.length > 1 && <td>{attendancePercentage}%</td>}

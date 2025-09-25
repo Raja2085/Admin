@@ -623,7 +623,7 @@ export default function StudentList() {
         style={{
           tableLayout: 'fixed',
           wordBreak: 'break-word',
-          fontSize: '0.82rem',
+          fontSize: '0.90rem',
         }}
       >
         <thead>
