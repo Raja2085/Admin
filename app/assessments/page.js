@@ -52,7 +52,7 @@ export default function Assessments() {
 
   useEffect(() => {
     fetchAssessments();
-  }, );
+  }, []);
 
   const fetchAssessments = async () => {
     setLoading(true);
@@ -154,10 +154,7 @@ export default function Assessments() {
       alert('Failed to fetch questions: ' + error.message);
       setQuestions([]);
     } else {
-      setQuestions(data ? data.map(q => ({
-        ...q,
-        options: Array.isArray(q.options) ? q.options : JSON.parse(q.options)
-      })) : []);
+      setQuestions(data || []);
     }
     setQuestionsLoading(false);
   };
