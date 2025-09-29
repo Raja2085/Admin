@@ -203,8 +203,8 @@ export default function StudentList() {
       attendance_date: date,
       status: 'A',
     }));
-    const { error } = await supabase.from('attendance').insert(attendanceData);
-    if (error) console.error('Error inserting attendance:', error);
+    // const { error } = await supabase.from('attendance').insert(attendanceData);
+    // if (error) console.error('Error inserting attendance:', error);
   }
 
   async function handleAddSubmit(e) {

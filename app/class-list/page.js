@@ -1,8 +1,8 @@
 // /app/classlist/page.js
-"use client";
 
-import { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabaseClient";
+'use client';
+import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function ClassList() {
   const [classes, setClasses] = useState([]);
@@ -10,98 +10,77 @@ export default function ClassList() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
-    coach: "",
-    class_name: "",
-    status: "",
-    hour: "10",
-    minute: "00",
-    ampm: "AM",
-    level: "",
-    date: "",
+    coach: '', // Will now store coach_display_id
+    class_name: '',
+    status: '',
+    hour: '10',
+    minute: '00',
+    ampm: 'AM',
+    level: '',
+    date: '',
   });
 
-  const [coachOptions, setCoachOptions] = useState([]);
+  // State now stores objects with { name, id }
+  const [coachOptions, setCoachOptions] = useState([]); 
   const [classNameOptions, setClassNameOptions] = useState([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [sharedClass, setSharedClass] = useState(null);
-
-  // --- Google integration state ---
+  
+  // State for Google integration
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [userSession, setUserSession] = useState(null);
-  const [isSessionChecked, setIsSessionChecked] = useState(false);
+  const [isSessionChecked, setIsSessionChecked] = useState(false); 
 
   useEffect(() => {
     fetchClasses();
     fetchCoachOptions();
     fetchClassNameOptions();
-    checkUserAndGoogleConnection();
+    checkUserAndGoogleConnection(); 
   }, []);
 
-  // ✅ FIXED: check user session + Google connection
   const checkUserAndGoogleConnection = async () => {
     const { data: { session }, error } = await supabase.auth.getSession();
     setUserSession(session);
 
     if (error || !session?.user) {
-      console.warn("No active Supabase session:", error);
-      setIsGoogleConnected(false);
-      setIsSessionChecked(true);
-      return;
+        console.warn("No active Supabase session or error:", error);
+        setIsGoogleConnected(false);
+        setIsSessionChecked(true);
+        return;
     }
 
-    console.log("Current Supabase User ID:", session.user.id);
-
-    // Look up Google integration row for this user
     const { data, error: tokenError } = await supabase
-      .from("google_integrations")
-      .select("id")
-      .eq("user_id", session.user.id)
-      .maybeSingle();
-
-    if (tokenError) {
-      console.error("Supabase RLS/Fetch Error:", tokenError);
-    }
+      .from('google_integrations')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .maybeSingle(); 
 
     const connected = !!data && !tokenError;
     setIsGoogleConnected(connected);
-
-    if (connected) {
-      console.log("Connection Check: SUCCESS. Token Found.");
-    } else {
-      console.log("Connection Check: FAILED. Token NOT Found.");
-    }
-
-    setIsSessionChecked(true);
+    setIsSessionChecked(true); 
   };
 
-  // ✅ FIXED: handle Google OAuth redirect properly
   const handleConnectGoogle = async () => {
     if (!userSession?.user) {
       alert("You must be logged in to connect your Google account.");
       return;
     }
-
-    const res = await fetch(
-      `/api/auth/callback/google?auth_url_only=true&user_id=${userSession.user.id}`
-    );
+    
+    const res = await fetch(`/api/auth/callback/google?auth_url_only=true&user_id=${userSession.user.id}`);
     const data = await res.json();
 
     if (res.ok && data.authUrl) {
       window.location.href = data.authUrl;
     } else {
-      alert("Failed to initiate Google connection.");
+      alert('Failed to initiate Google connection. Check API route setup.');
     }
   };
 
   const fetchClasses = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("classlist")
-      .select("*")
-      .order("id", { ascending: false });
-
+    const { data, error } = await supabase.from('classlist').select('*').order('id', { ascending: false }); 
     if (error) {
-      alert("Fetch error: " + error.message);
+      alert('Fetch error: ' + error.message);
       setClasses([]);
     } else {
       setClasses(data || []);
@@ -109,63 +88,61 @@ export default function ClassList() {
     setLoading(false);
   };
 
+  // 👇 CORRECTED: Fetching both coach name and coach_display_id
   const fetchCoachOptions = async () => {
-    const { data, error } = await supabase.from("coaches").select("name");
+    const { data, error } = await supabase.from('coaches').select('name, coach_display_id');
     if (!error) {
-      const uniqueCoaches = [...new Set(data.map((c) => c.name))];
-      setCoachOptions(uniqueCoaches);
+      // Store the objects { name, coach_display_id }
+      setCoachOptions(data || []);
     }
   };
 
   const fetchClassNameOptions = async () => {
-    const { data, error } = await supabase.from("coaches").select("specialty");
+    const { data, error } = await supabase.from('coaches').select('specialty');
     if (!error) {
-      const uniqueSpecialties = [...new Set(data.map((c) => c.specialty))];
+      const uniqueSpecialties = [...new Set(data.map(c => c.specialty))];
       setClassNameOptions(uniqueSpecialties);
     }
   };
 
   const handleAddClick = () => {
     if (!isGoogleConnected) {
-      alert(
-        "You must connect your Google account first to schedule a class with a Meet link."
-      );
-      return;
+        alert("You must connect your Google account first to schedule a class with a Meet link.");
+        return;
     }
     setEditingId(null);
     setFormData({
-      coach: "",
-      class_name: "",
-      status: "",
-      hour: "10",
-      minute: "00",
-      ampm: "AM",
-      level: "",
-      date: "",
+      coach: '',
+      class_name: '',
+      status: '',
+      hour: '10',
+      minute: '00',
+      ampm: 'AM',
+      level: '',
+      date: '',
     });
     setShowForm(true);
   };
 
   const handleEditClick = (cls) => {
-    let hour = "10",
-      minute = "00",
-      ampm = "AM";
+    let hour = '10', minute = '00', ampm = 'AM';
     if (cls.time) {
-      const parts = cls.time.split(":");
+      const parts = cls.time.split(':'); 
       if (parts.length === 2) {
         let hInt = parseInt(parts[0]);
         minute = parts[1];
         if (hInt >= 12) {
-          ampm = "PM";
-          hour = (hInt === 12 ? 12 : hInt - 12).toString().padStart(2, "0");
+          ampm = 'PM';
+          hour = (hInt === 12 ? 12 : hInt - 12).toString().padStart(2, '0');
         } else {
-          ampm = "AM";
-          hour = (hInt === 0 ? 12 : hInt).toString().padStart(2, "0");
+          ampm = 'AM';
+          hour = (hInt === 0 ? 12 : hInt).toString().padStart(2, '0');
         }
       }
     }
+    // For editing, you need to set coach back to the ID (cls.coach_id) if available
     setEditingId(cls.id);
-    setFormData({ ...cls, hour, minute, ampm });
+    setFormData({ ...cls, coach: cls.coach_id || cls.coach, hour, minute, ampm });
     setShowForm(true);
   };
 
@@ -176,36 +153,45 @@ export default function ClassList() {
 
   function convertTo24Hour(hour, minute, ampm) {
     let h = parseInt(hour);
-    if (ampm === "PM" && h !== 12) h += 12;
-    if (ampm === "AM" && h === 12) h = 0;
-    return `${h.toString().padStart(2, "0")}:${minute.padStart(2, "0")}`;
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return `${h.toString().padStart(2, '0')}:${minute.padStart(2, '0')}`;
   }
 
+  // 👇 CORRECTED: No longer fetching coach ID; it's already in formData.coach
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-
+    
     if (!userSession) {
-      alert("Authentication error. Please log in again.");
-      return;
+        alert('Authentication error. Please log in again.');
+        return;
     }
     if (!isGoogleConnected) {
-      alert("Google account not connected. Please connect it first.");
-      return;
+        alert('Google account not connected. Please connect it before scheduling a class.');
+        return;
     }
+    
     if (editingId !== null) {
-      alert(
-        "Editing is not yet supported for classes with Google Meet links. Please delete and re-add."
-      );
-      return;
+        alert("Editing is not yet supported for classes with Google Meet links. Please delete and re-add.");
+        return;
     }
 
-    const time24 = convertTo24Hour(
-      formData.hour,
-      formData.minute,
-      formData.ampm
-    );
-    const classData = {
-      coach: formData.coach,
+    const time24 = convertTo24Hour(formData.hour, formData.minute, formData.ampm);
+    
+    // --- 1. Map Coach ID and Name ---
+    const selectedCoach = coachOptions.find(opt => opt.coach_display_id === formData.coach);
+
+    if (!selectedCoach) {
+        alert("Selected coach ID is invalid. Please select a coach from the dropdown.");
+        return;
+    }
+    
+    // --- 2. Create Final Payload ---
+    let classData = {
+      // Store the Coach Name (for display purposes)
+      coach: selectedCoach.name, 
+      // Store the Coach ID (for database reference)
+      coach_id: formData.coach, 
       class_name: formData.class_name,
       status: formData.status,
       time: time24,
@@ -214,37 +200,36 @@ export default function ClassList() {
     };
 
     try {
-      const res = await fetch("/api/create-meet", {
-        method: "POST",
-        body: JSON.stringify(classData),
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userSession.access_token}`,
+      const res = await fetch('/api/create-meet', {
+        method: 'POST',
+        body: JSON.stringify(classData), // Payload now includes coach_id and coach name
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${userSession.access_token}` 
         },
       });
 
       if (!res.ok) {
         const errorData = await res.json();
-        alert("API Error: " + (errorData.error || "Failed to create class."));
+        alert('API Error: ' + (errorData.error || 'Failed to create class.'));
         return;
       }
 
       const data = await res.json();
-      console.log("Meet link created:", data.meetLink);
-
-      alert("Class added with Google Meet link!");
+      alert('Class added with Google Meet link!');
       setShowForm(false);
       fetchClasses();
     } catch (error) {
-      console.error("Network or server error:", error);
-      alert("Network or server error: " + (error.message || "Unknown error"));
+      console.error('Network or server error:', error);
+      alert('Network or server error: ' + (error.message || 'An unknown error occurred.'));
     }
   };
+  // 👆 END of handleFormSubmit
 
   const handleDeleteClick = async (id) => {
     if (!window.confirm("Are you sure you want to delete this class?")) return;
-    const { error } = await supabase.from("classlist").delete().eq("id", id);
-    if (error) alert("Delete error: " + error.message);
+    const { error } = await supabase.from('classlist').delete().eq('id', id);
+    if (error) alert('Delete error: ' + error.message);
     else fetchClasses();
   };
 
@@ -258,27 +243,22 @@ export default function ClassList() {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="h4 fw-bold">Class List</h2>
         <div className="d-flex gap-2">
-          {!isSessionChecked ? (
-            <button className="btn btn-secondary" disabled>
-              Loading...
+            
+            {!isSessionChecked ? (
+                <button className="btn btn-secondary" disabled>Loading...</button>
+            ) : !isGoogleConnected ? (
+                <button onClick={handleConnectGoogle} className="btn btn-warning">
+                    Connect Google 🤝
+                </button>
+            ) : (
+                <button className="btn btn-success" disabled>
+                    Google Connected ✅
+                </button>
+            )}
+            
+            <button onClick={handleAddClick} className="btn btn-success" disabled={!isGoogleConnected || !isSessionChecked}>
+              + Add Class
             </button>
-          ) : !isGoogleConnected ? (
-            <button onClick={handleConnectGoogle} className="btn btn-warning">
-              Connect Google 🤝
-            </button>
-          ) : (
-            <button className="btn btn-success" disabled>
-              Google Connected ✅
-            </button>
-          )}
-
-          <button
-            onClick={handleAddClick}
-            className="btn btn-success"
-            disabled={!isGoogleConnected || !isSessionChecked}
-          >
-            + Add Class
-          </button>
         </div>
       </div>
 
@@ -298,13 +278,14 @@ export default function ClassList() {
                       required
                       className="form-select"
                       name="coach"
-                      value={formData.coach}
+                      value={formData.coach} // Value is now coach_display_id
                       onChange={handleInputChange}
                     >
                       <option value="">Select Coach</option>
+                      {/* 👇 CORRECTED: Use coach_display_id as the value, but show name */}
                       {coachOptions.map((coach, idx) => (
-                        <option key={idx} value={coach}>
-                          {coach}
+                        <option key={idx} value={coach.coach_display_id}>
+                          {coach.name}
                         </option>
                       ))}
                     </select>
