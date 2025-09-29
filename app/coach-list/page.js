@@ -20,6 +20,7 @@ export default function CoachList() {
     fetchCoaches();
   }, []);
 
+  // Fetch all coaches
   const fetchCoaches = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -44,7 +45,13 @@ export default function CoachList() {
 
   const handleEditClick = (coach) => {
     setEditingCoach(coach.id);
-    setFormData({ ...coach });
+    setFormData({
+      name: coach.name,
+      specialty: coach.specialty,
+      email: coach.email,
+      phone: coach.phone,
+      location: coach.location
+    });
     setShowForm(true);
   };
 
@@ -56,16 +63,22 @@ export default function CoachList() {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
 
+    const { name, specialty, email, phone, location } = formData;
+
     if (editingCoach !== null) {
+      // Update existing coach
       const { error } = await supabase
         .from('coaches')
-        .update(formData)
+        .update({ name, specialty, email, phone, location })
         .eq('id', editingCoach);
+
       if (error) alert('Update error: ' + error.message);
     } else {
+      // Insert new coach (generated coach_display_id will be created automatically)
       const { error } = await supabase
         .from('coaches')
-        .insert([formData]);
+        .insert([{ name, specialty, email, phone, location }]);
+
       if (error) alert('Insert error: ' + error.message);
     }
 
@@ -80,13 +93,10 @@ export default function CoachList() {
       .from('coaches')
       .delete()
       .eq('id', id);
+
     if (error) alert('Delete error: ' + error.message);
     else fetchCoaches();
   };
-
-  function formatId(id) {
-    return id.toString().padStart(4, '0');
-  }
 
   return (
     <div className="container my-4">
@@ -105,21 +115,15 @@ export default function CoachList() {
               </div>
               <form onSubmit={handleFormSubmit}>
                 <div className="modal-body custom-modal-body">
-                  {[
-                    { label: 'Name', name: 'name', type: 'text' },
-                    { label: 'Specialty', name: 'specialty', type: 'text' },
-                    { label: 'Email', name: 'email', type: 'email' },
-                    { label: 'Phone', name: 'phone', type: 'text' },
-                    { label: 'Location', name: 'location', type: 'text' }
-                  ].map(field => (
-                    <div className="mb-3" key={field.name}>
-                      <label className="form-label">{field.label}</label>
+                  {['name','specialty','email','phone','location'].map(field => (
+                    <div className="mb-3" key={field}>
+                      <label className="form-label">{field.charAt(0).toUpperCase() + field.slice(1)}</label>
                       <input
                         required
-                        type={field.type}
-                        name={field.name}
+                        type={field === 'email' ? 'email' : 'text'}
+                        name={field}
                         className="form-control"
-                        value={formData[field.name]}
+                        value={formData[field]}
                         onChange={handleInputChange}
                       />
                     </div>
@@ -155,7 +159,7 @@ export default function CoachList() {
             {coaches.map((coach, idx) => (
               <tr key={coach.id}>
                 <td>{idx + 1}</td>
-                <td>{formatId(coach.id)}</td>
+                <td>{coach.coach_display_id}</td>
                 <td>{coach.name}</td>
                 <td>{coach.specialty}</td>
                 <td>{coach.email}</td>

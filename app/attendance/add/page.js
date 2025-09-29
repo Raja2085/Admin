@@ -20,7 +20,7 @@ export default function AttendancePage() {
       setError('');
       let { data, error } = await supabase
         .from('student_list')
-        .select('course', { count: 'exact', head: false })
+        .select('course')
         .neq('course', '') // omit empty courses if any
         .order('course', { ascending: true })
         .limit(1000);
@@ -86,14 +86,14 @@ export default function AttendancePage() {
       class_type: selectedClass,
     }));
 
-    const { error } = await supabase
+    const { error: upsertError } = await supabase
       .from('attendance')
       .upsert(records, { onConflict: ['student_id', 'attendance_date', 'class_type'] });
 
     setSaving(false);
 
-    if (error) {
-      setError(error.message);
+    if (upsertError) {
+      setError(upsertError.message);
     } else {
       router.push('/attendance'); // Redirect after saving
     }

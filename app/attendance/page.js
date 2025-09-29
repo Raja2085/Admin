@@ -16,7 +16,7 @@ const AttendanceClassSummary = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch total unique student count from student_list (independent of attendance filter)
+  // Fetch total unique student count
   useEffect(() => {
     async function fetchTotalStudents() {
       try {
@@ -61,14 +61,12 @@ const AttendanceClassSummary = () => {
     fetchData();
   }, [filterParams]);
 
-  // Calculate attendance summary for filtered records
-  const uniqueStudentIds = new Set(records.map(r => r.student_id));
+  // Attendance summary
   const totalPresent = records.filter(r => r.status === 'P').length;
   const totalAbsent = records.filter(r => r.status === 'A').length;
 
   const allClasses = Array.from(new Set(records.map(r => r.class_type)));
-  const filteredClasses = allClasses;
-  const classGroups = filteredClasses.map(className => {
+  const classGroups = allClasses.map(className => {
     const classRecords = records.filter(r => r.class_type === className);
     const studentIds = new Set(classRecords.map(r => r.student_id));
     const present = classRecords.filter(r => r.status === 'P').length;
@@ -108,6 +106,7 @@ const AttendanceClassSummary = () => {
           </Card>
         </Col>
       </Row>
+
       <Row className="mb-3" style={{ gap: 10 }}>
         <Col md={3}>
           <Form.Control type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} max={toDate} />
@@ -119,12 +118,25 @@ const AttendanceClassSummary = () => {
           <Form.Control type="text" placeholder="Search class" value={search} onChange={e => setSearch(e.target.value)} />
         </Col>
         <Col md={1}>
-          <Button variant="primary" onClick={() => setFilterParams({ searchTerm: search, from: fromDate, to: toDate })} style={{ width: '100%' }}>Search</Button>
+          <Button
+            variant="primary"
+            onClick={() => setFilterParams({ searchTerm: search, from: fromDate, to: toDate })}
+            style={{ width: '100%' }}
+          >
+            Search
+          </Button>
         </Col>
         <Col md={2}>
-          <Button variant="success" onClick={() => router.push('/attendance/add')} style={{ width: '100%' }}>+ Add Attendance</Button>
+          <Button
+            variant="success"
+            onClick={() => router.push('/attendance/add')}
+            style={{ width: '100%' }}
+          >
+            + Add Attendance
+          </Button>
         </Col>
       </Row>
+
       <Table bordered hover responsive className="shadow-sm text-center align-middle">
         <thead className="table-dark">
           <tr>
@@ -150,8 +162,18 @@ const AttendanceClassSummary = () => {
               <td className="fw-bold text-danger">{g.absent}</td>
               <td className="fw-bold">{g.percentage}%</td>
               <td>
-                <Button size="sm" variant="info"
-                  onClick={() => router.push(`/attendance/class/${encodeURIComponent(g.className)}?date=${fromDate || ''}`)}>
+                <Button
+                  size="sm"
+                  variant="info"
+                  onClick={() => {
+                    let url = `/attendance/class/${encodeURIComponent(g.className)}`;
+                    const params = [];
+                    if (fromDate) params.push(`from=${fromDate}`);
+                    if (toDate) params.push(`to=${toDate}`);
+                    if (params.length > 0) url += `?${params.join('&')}`;
+                    router.push(url);
+                  }}
+                >
                   <FaEye /> View
                 </Button>
               </td>

@@ -102,7 +102,6 @@ export default function DemoClasses() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-
     const time = `${formData.hour}:${formData.minute} ${formData.ampm}`;
     const dbData = { ...formData, time };
     delete dbData.hour;
@@ -248,9 +247,9 @@ export default function DemoClasses() {
                     <label className="form-label">Level</label>
                     <select name="level" required className="form-select" value={formData.level} onChange={handleInputChange}>
                       <option value="">Select Level</option>
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
+                      <option value="Beginner">Beginner</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Advanced">Advanced</option>
                     </select>
                   </div>
                 </div>

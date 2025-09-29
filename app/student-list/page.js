@@ -597,9 +597,9 @@ export default function StudentList() {
                           <Form.Label>Level</Form.Label>
                           <Form.Select name="level" value={formData.level || ''} onChange={handleEditInputChange}>
                             <option value="">Select Level</option>
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
+                            <option value="Beginner">Beginner</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Advanced">Advanced</option>
                           </Form.Select>
                         </Form.Group>
                       </Col>
@@ -629,13 +629,13 @@ export default function StudentList() {
         <thead>
           <tr>
             <th style={{ width: '99px' }}>Reg No</th>
-            <th style={{ width: '110px' }}>Name</th>
-            <th style={{ width: '110px' }}>DOB</th>
-            <th style={{ width: '180px' }}>Email</th>
+            <th style={{ width: '115px' }}>Name</th>
+            <th style={{ width: '115px' }}>DOB</th>
+            <th style={{ width: '190px' }}>Email</th>
             <th style={{ width: '120px' }}>Phone</th>
-            <th style={{ width: '100px' }}>Place</th>
+            <th style={{ width: '90px' }}>Place</th>
             <th style={{ width: '100px' }}>Class Type</th>
-            <th style={{ width: '100px' }}>Group Name</th>
+            <th style={{ width: '90px' }}>Group Name</th>
             <th style={{ width: '130px' }}>Actions</th>
           </tr>
         </thead>

@@ -1,18 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Container, Row, Col, Form, Card, Button, Alert } from 'react-bootstrap'
 import { supabase } from '../../lib/supabaseClient'
 import { useRouter } from 'next/navigation'
+import { Container, Row, Col, Form, Card, Button, Alert } from 'react-bootstrap'
 
 export default function Profile() {
   const router = useRouter()
   const [profileName, setProfileName] = useState('')
   const [profileEmail, setProfileEmail] = useState('')
+  const [userId, setUserId] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -20,97 +20,56 @@ export default function Profile() {
   useEffect(() => {
     async function fetchProfile() {
       setLoading(true)
-      const isAuthenticated = localStorage.getItem('isAuthenticated')
-      const userEmail = localStorage.getItem('userEmail')
-
-      if (!isAuthenticated || !userEmail) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (!user || userError) {
         router.push('/Authentication/sign-in')
         setLoading(false)
         return
       }
-
-      const { data, error } = await supabase
+      setUserId(user.id)
+      setProfileEmail(user.email)
+      const { data, error: profileError } = await supabase
         .from('profiles')
-        .select('full_name, email')
-        .eq('email', userEmail)
+        .select('full_name')
+        .eq('id', user.id)
         .single()
-
-      if (error) {
-        console.error('Error loading profile:', error.message)
-        setError('Failed to load profile')
-      } else if (data) {
-        setProfileName(data.full_name || '')
-        setProfileEmail(data.email || '')
-      }
+      if (profileError) setError('Failed to load profile')
+      else setProfileName(data.full_name || '')
       setLoading(false)
     }
     fetchProfile()
   }, [router])
 
   const handleUpdate = async () => {
-    setMessage('')
     setError('')
-    const userEmail = localStorage.getItem('userEmail')
-    if (!userEmail) {
+    setMessage('')
+    if (!userId) {
       setError('User not found')
       return
     }
 
-    // Update profile name
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ full_name: profileName })
-      .eq('email', userEmail)
+    // Password change only; name/email are read-only and not updated
 
-    if (updateError) {
-      setError('Failed to update profile name')
-      return
-    }
-
-    // Password change validation and update
-    if (newPassword.trim() !== '' || confirmPassword.trim() !== '') {
+    if (newPassword || confirmPassword) {
       if (newPassword !== confirmPassword) {
-        setError('New password and confirm password do not match')
+        setError('Passwords do not match')
         return
       }
-      if (currentPassword.trim() === '') {
-        setError('Please enter your current password')
+      if (!currentPassword || currentPassword.length < 6) {
+        setError('Enter your current password')
         return
       }
-
-      // Verify current password
-      const { data, error: passCheckError } = await supabase
-        .from('signin')
-        .select('password')
-        .eq('email', userEmail)
-        .single()
-
-      if (passCheckError) {
-        setError('Failed to verify current password')
-        return
-      }
-
-      if (!data || data.password !== currentPassword) {
-        setError('Current password is incorrect')
-        return
-      }
-
-      // Update to new password
-      const { error: passError } = await supabase
-        .from('signin')
-        .update({ password: newPassword })
-        .eq('email', userEmail)
-
-      if (passError) {
+      const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword })
+      if (passwordError) {
         setError('Failed to update password')
         return
       }
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
     }
 
     setMessage('Profile updated successfully')
-    setCurrentPassword('')
-    setNewPassword('')
-    setConfirmPassword('')
   }
 
   if (loading) return <div>Loading profile...</div>
@@ -129,48 +88,45 @@ export default function Profile() {
                 <Form.Control
                   type="text"
                   value={profileName}
-                  onChange={(e) => setProfileName(e.target.value)}
+                  readOnly
                 />
               </Form.Group>
-
               <Form.Group controlId="profileEmail" className="mb-3">
-                <Form.Label>Email (readonly)</Form.Label>
-                <Form.Control type="email" value={profileEmail} disabled />
+                <Form.Label>Email</Form.Label>
+                <Form.Control
+                  type="email"
+                  value={profileEmail}
+                  readOnly
+                />
               </Form.Group>
-
               <Form.Group controlId="currentPassword" className="mb-3">
                 <Form.Label>Current Password</Form.Label>
                 <Form.Control
                   type="password"
-                  placeholder="Enter current password"
                   value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
                 />
               </Form.Group>
-
               <Form.Group controlId="newPassword" className="mb-3">
                 <Form.Label>New Password</Form.Label>
                 <Form.Control
                   type="password"
-                  placeholder="Enter new password"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
                 />
               </Form.Group>
-
               <Form.Group controlId="confirmPassword" className="mb-3">
-                <Form.Label>Confirm New Password</Form.Label>
+                <Form.Label>Confirm Password</Form.Label>
                 <Form.Control
                   type="password"
-                  placeholder="Confirm new password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
                 />
               </Form.Group>
-
-              <Button variant="primary" onClick={handleUpdate}>
-                Save Changes
-              </Button>
+              <Button variant="primary" onClick={handleUpdate}>Save Changes</Button>
             </Form>
           </Col>
         </Row>

@@ -10,25 +10,24 @@ export default function SignInPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleSignIn = async (e) => {
     e.preventDefault()
     setErrorMsg('')
+    setLoading(true)
 
-    // Query signin table for matching credentials
-    const { data, error } = await supabase
-      .from('signin')
-      .select('*')
-      .eq('email', email)
-      .eq('password', password)
-      .single()
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-    if (error || !data) {
+    setLoading(false)
+    if (error) {
       setErrorMsg('Invalid email or password')
       return
     }
 
-    // Store login status and email for session management
     localStorage.setItem('isAuthenticated', 'true')
     localStorage.setItem('userEmail', email)
     router.push('/dashboard')
@@ -60,8 +59,13 @@ export default function SignInPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </Form.Group>
-        <Button variant="primary" type="submit" className="w-100">
-          Sign In
+        <Button 
+          variant="primary" 
+          type="submit" 
+          className="w-100" 
+          disabled={loading}
+        >
+          {loading ? 'Signing In...' : 'Sign In'}
         </Button>
       </Form>
     </>
