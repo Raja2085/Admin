@@ -73,12 +73,16 @@ export default function StudentList() {
     }
   }
 
+  // Change: fetch specialties from coaches table
   async function fetchCourseOptions() {
     const { data, error } = await supabase
-      .from('classlist')
-      .select('class_name');
-    if (!error) {
-      setCourseOptions((data || []).map(row => row.class_name));
+      .from('coaches')
+      .select('specialty');
+    if (!error && data) {
+      const specialties = [...new Set(data.map(row => row.specialty))];
+      setCourseOptions(specialties);
+    } else {
+      console.error('Fetch course/specialty error:', error);
     }
   }
 
@@ -106,7 +110,6 @@ export default function StudentList() {
     setClassTypeFilter(e.target.value.toLowerCase());
   }
 
-  // Fix here: generate Reg No once when opening modal
   function openAddModal() {
     setMode('add');
     setFormData({ ...initialIndividual, class_type: '', reg_no: generateRegNo() });
@@ -174,7 +177,6 @@ export default function StudentList() {
     }));
   }
 
-  // Fix here: assign reg_no once when adding a member
   function handleAddMember() {
     setFormData((prev) => ({
       ...prev,

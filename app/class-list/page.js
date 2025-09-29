@@ -360,9 +360,9 @@ export default function ClassList() {
                       onChange={handleInputChange}
                     >
                       <option value="">Select Level</option>
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
+                      <option value="Beginner">Beginner</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Advanced">Advanced</option>
                     </select>
                   </div>
                   <div className="mb-3">
